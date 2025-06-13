@@ -20,8 +20,8 @@ services:
       - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
       - --certificatesresolvers.cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53
     ports:
-      - "${TAILSCALE_INTERFACE}:80:80"
-      - "${TAILSCALE_INTERFACE}:443:443"
+      - "${TRAEFIK_INTERFACE:-0.0.0.0}:80:80"
+      - "${TRAEFIK_INTERFACE:-0.0.0.0}:443:443"
     environment:
       - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
     volumes:
@@ -32,12 +32,12 @@ services:
       - traefik
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=cloudflare"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
       - "traefik.http.routers.traefik-dashboard.middlewares=authelia@docker"
-      - "traefik.http.middlewares.authelia.forwardauth.address=http://${AUTHELIA_HOST:-authelia}:9091/api/verify?rd=https://auth.${AUTHELIA_DOMAIN:-${DOMAIN_NAME}}"
+      - "traefik.http.middlewares.authelia.forwardauth.address=http://${AUTHELIA_HOST:-authelia}:9091/api/verify?rd=https://${AUTHELIA_HOSTNAME}"
       - "traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true"
       - "traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
 

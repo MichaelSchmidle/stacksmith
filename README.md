@@ -4,13 +4,14 @@ Docker stack management for Portainer environments with Traefik reverse proxy an
 
 ## Architecture
 
-- **Main Environment**: Runs Portainer management interface + global Authelia SSO
-- **Other Environments**: Run Portainer agents + individual Traefik instances
-- **Single Global Authelia**: Provides SSO across all environments via Tailscale network
+- **Management Environment**: Runs Portainer management interface (can be any environment)
+- **SSO Environment**: Runs global Authelia instance (typically on publicly accessible environment)
+- **Agent Environments**: Run Portainer agents + individual Traefik instances
+- **Flexible Deployment**: Deploy services where they make most sense (Authelia on VPS, management on home network)
 
 ## Quick Start
 
-### Main Environment (Management + SSO)
+### Management Environment
 
 1. Copy environment variables:
    ```bash
@@ -18,51 +19,60 @@ Docker stack management for Portainer environments with Traefik reverse proxy an
    # Edit .env with your configuration
    ```
 
-2. Start main services:
+2. Start Portainer management:
    ```bash
    docker compose -f docker-compose.yml -f shared/docker-compose.traefik.yml up -d
    ```
 
-### Other Environments (Agents Only)
+### SSO Environment (Authelia)
 
-1. Create `.env` file with:
-   ```bash
-   # Required for Traefik
-   DOMAIN_NAME=your-env.example.com
-   TAILSCALE_INTERFACE=100.64.0.1
-   ACME_EMAIL=your-email@example.com
-   CLOUDFLARE_API_TOKEN=your-token
-   
-   # Point to main environment's Authelia
-   AUTHELIA_HOST=100.64.0.1  # Main environment's Tailscale IP
-   AUTHELIA_DOMAIN=main.example.com
-   ```
+Deploy on publicly accessible environment (e.g., VPS):
+```bash
+# Copy Authelia environment variables
+cp shared/.env.authelia.example .env
 
-2. Start Traefik only:
-   ```bash
-   docker compose -f shared/docker-compose.traefik.yml up -d
-   ```
+# Start Traefik + Authelia for public SSO
+docker compose -f shared/docker-compose.traefik.yml -f shared/docker-compose.authelia.yml up -d
+```
 
-3. Deploy Portainer agent via Portainer UI or CLI commands
+### Agent Environments
+
+Deploy via Portainer management interface using `shared/docker-compose.traefik.yml` as the stack definition.
 
 ## Environment Variables
 
-See `.env.example` for all required variables including:
-- Domain and Tailscale configuration
-- Authelia JWT/session secrets
+**Management Environment**: See `.env.example`  
+**SSO Environment**: See `shared/.env.authelia.example`
+
+Variables include:
+- Ultra-short hostnames (`mgmt`, `auth`, `prxy`)
+- Network interface binding (`TRAEFIK_INTERFACE`)
+- Authelia JWT/session secrets (SSO environment only)
 - Cloudflare API token for Let's Encrypt
-- SMTP settings for Authelia notifications
-- Duo 2FA integration keys
+- SMTP settings and Duo 2FA integration
 
 ## Services
 
-- **Portainer**: `https://your-domain.com` (management interface)
-- **Authelia**: `https://auth.your-domain.com` (SSO login)
-- **Traefik**: `https://traefik.your-domain.com` (dashboard)
+Services are accessible via fully customizable hostnames:
+- **Portainer**: Management interface (e.g., `mgmt.j2.ms`)
+- **Authelia**: SSO login (e.g., `auth.j2.ms`)  
+- **Traefik**: Dashboard (e.g., `prxy.j2.ms`)
 
 ## Security
 
-- All services bind only to Tailscale interface
-- Authelia provides Duo 2FA protection
+- Management interface can bind to Tailscale for enhanced security
+- Authelia deployed on publicly accessible environment for proper SSO redirects
+- All environments support flexible interface binding (private/public)
+- Duo 2FA protection across all services and environments
 - Let's Encrypt certificates via Cloudflare DNS-01 challenge
+
+## Deployment Examples
+
+**Scenario 1: Home + VPS**
+- VPS: Traefik + Authelia (public SSO)
+- Home: Traefik + Portainer management (private)
+- All services authenticate via VPS Authelia
+
+**Scenario 2: All Public**  
+- Single VPS: All services with global SSO
 
