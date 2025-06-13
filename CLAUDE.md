@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-Stacksmith is a Docker stack management system for Portainer environments with flexible SSO deployment. The architecture supports decoupled service placement:
+Stacksmith is a Docker stack management system for Portainer environments with flexible authentication deployment. The architecture supports decoupled service placement:
 
 - **Management Environment**: Runs Portainer management interface (can be any environment)
-- **SSO Environment**: Runs global Authelia instance (typically on publicly accessible environment like VPS)
+- **Auth Environment**: Runs global Authelia instance (typically on publicly accessible environment like VPS)
 - **Agent Environments**: Run individual Traefik instances + Portainer agents
 - **Flexible Deployment**: Services deployed where they make most operational sense
 
@@ -16,7 +16,7 @@ Stacksmith is a Docker stack management system for Portainer environments with f
 ### Shared Service Templates
 - **`shared/docker-compose.traefik.yml`**: Reusable Traefik service for any environment
 - **`shared/docker-compose.authelia.yml`**: Standalone Authelia service for flexible deployment
-- **`shared/authelia/`**: Global SSO configuration with Duo 2FA integration
+- **`shared/authelia/`**: Global authentication configuration with Duo 2FA integration
 
 ### Key Design Decisions
 - **Decoupled Authelia**: Can be deployed independently on publicly accessible environment (e.g., VPS)
@@ -25,7 +25,7 @@ Stacksmith is a Docker stack management system for Portainer environments with f
 
 ### Environment Variable Strategy
 - **Management Environment**: `.env.example` (Portainer + Traefik variables)
-- **SSO Environment**: `shared/.env.authelia.example` (Authelia + Traefik variables)
+- **Auth Environment**: `shared/.env.authelia.example` (Authelia + Traefik variables)
 - **Agent Environments**: Minimal Traefik variables + remote Authelia references
 
 ## Common Commands
@@ -39,12 +39,12 @@ cp .env.example .env
 docker compose -f docker-compose.yml -f shared/docker-compose.traefik.yml up -d
 ```
 
-### SSO Environment Deployment (e.g., on VPS)
+### Auth Environment Deployment (e.g., on VPS)
 ```bash
 # Copy Authelia environment variables
 cp shared/.env.authelia.example .env
 
-# Start Traefik + Authelia for public SSO
+# Start Traefik + Authelia for public authentication
 docker compose -f shared/docker-compose.traefik.yml -f shared/docker-compose.authelia.yml up -d
 ```
 
@@ -68,7 +68,7 @@ docker compose restart authelia
 ## Critical Configuration Notes
 
 - **Interface Binding**: Use `TRAEFIK_INTERFACE` for flexible public/private binding (defaults to `0.0.0.0`)
-- **Authelia Deployment**: Deploy on publicly accessible environment for proper SSO browser redirects
+- **Authelia Deployment**: Deploy on publicly accessible environment for proper authentication browser redirects
 - **Ultra-Short Hostnames**: Concise 3-4 character subdomains (`mgmt.j2.ms`, `auth.j2.ms`, `prxy.j2.ms`)
 - **Remote Connectivity**: Agent environments connect to Authelia via `AUTHELIA_HOST` and `AUTHELIA_HOSTNAME`
 - **Let's Encrypt**: Uses Cloudflare DNS-01 challenge (requires API token)
@@ -77,6 +77,6 @@ docker compose restart authelia
 ## Common Deployment Scenarios
 
 **Home + VPS Setup:**
-- VPS: `docker-compose.traefik.yml + docker-compose.authelia.yml` (public SSO)
+- VPS: `docker-compose.traefik.yml + docker-compose.authelia.yml` (public authentication)
 - Home: `docker-compose.yml + docker-compose.traefik.yml` (private management)
-- Agent environments point to VPS Authelia for SSO
+- Agent environments point to VPS Authelia for authentication
