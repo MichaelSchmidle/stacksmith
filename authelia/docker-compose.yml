@@ -4,7 +4,7 @@ services:
     container_name: authelia
     restart: unless-stopped
     volumes:
-      - ./shared/authelia:/config
+      - .:/config
     environment:
       - AUTHELIA_JWT_SECRET=${AUTHELIA_JWT_SECRET}
       - AUTHELIA_SESSION_SECRET=${AUTHELIA_SESSION_SECRET}

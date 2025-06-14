@@ -1,7 +1,6 @@
 services:
   traefik:
-    image: traefik:3
-    container_name: ${TRAEFIK_CONTAINER_NAME:-traefik}
+    image: traefik:latest
     restart: unless-stopped
     command:
       - --api.dashboard=true
@@ -23,10 +22,10 @@ services:
       - "${TRAEFIK_INTERFACE:-0.0.0.0}:80:80"
       - "${TRAEFIK_INTERFACE:-0.0.0.0}:443:443"
     environment:
-      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - CLOUDFLARE_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./shared/traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./dynamic:/etc/traefik/dynamic:ro
       - traefik-certificates:/letsencrypt
     networks:
       - traefik

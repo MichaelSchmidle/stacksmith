@@ -13,10 +13,9 @@ Stacksmith is a Docker stack management system for Portainer environments with f
 
 ## Key Components
 
-### Shared Service Templates
-- **`shared/docker-compose.traefik.yml`**: Reusable Traefik service for any environment
-- **`shared/docker-compose.authelia.yml`**: Standalone Authelia service for flexible deployment
-- **`shared/authelia/`**: Global authentication configuration with Duo 2FA integration
+### Service Templates
+- **`traefik/`**: Traefik reverse proxy service with dynamic configuration and environment variables
+- **`authelia/`**: Standalone Authelia authentication service with Duo 2FA integration
 
 ### Key Design Decisions
 - **Decoupled Authelia**: Can be deployed independently on publicly accessible environment (e.g., VPS)
@@ -24,34 +23,39 @@ Stacksmith is a Docker stack management system for Portainer environments with f
 - **Ultra-Short Hostnames**: 3-4 character subdomains (`mgmt`, `auth`, `prxy`) for concise URLs
 
 ### Environment Variable Strategy
-- **Management Environment**: `.env.example` (Portainer + Traefik variables)
-- **Auth Environment**: `shared/.env.authelia.example` (Authelia + Traefik variables)
-- **Agent Environments**: Minimal Traefik variables + remote Authelia references
+- **Management Environment**: `.env.example` (Portainer variables)
+- **Traefik Environment**: `traefik/.env.example` (Traefik-specific variables)
+- **Auth Environment**: `authelia/.env.example` (Authelia + Traefik variables)
+- **Agent Environments**: Use `traefik/.env.example` with remote Authelia references
 
 ## Common Commands
 
 ### Management Environment Deployment
 ```bash
-# Copy and configure environment variables
+# Configure management environment
 cp .env.example .env
+cp traefik/.env.example traefik/.env
 
 # Start Portainer management + Traefik
-docker compose -f docker-compose.yml -f shared/docker-compose.traefik.yml up -d
+docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
 ```
 
 ### Auth Environment Deployment (e.g., on VPS)
 ```bash
-# Copy Authelia environment variables
-cp shared/.env.authelia.example .env
+# Configure authentication environment
+cp authelia/.env.example .env
 
 # Start Traefik + Authelia for public authentication
-docker compose -f shared/docker-compose.traefik.yml -f shared/docker-compose.authelia.yml up -d
+docker compose -f traefik/docker-compose.yml -f authelia/docker-compose.yml up -d
 ```
 
 ### Agent Environment Deployment
 ```bash
+# Configure agent environment
+cp traefik/.env.example .env
+
 # Start only Traefik (points to remote Authelia)
-docker compose -f shared/docker-compose.traefik.yml up -d
+docker compose -f traefik/docker-compose.yml up -d
 ```
 
 ### Service Management
@@ -77,6 +81,6 @@ docker compose restart authelia
 ## Common Deployment Scenarios
 
 **Home + VPS Setup:**
-- VPS: `docker-compose.traefik.yml + docker-compose.authelia.yml` (public authentication)
-- Home: `docker-compose.yml + docker-compose.traefik.yml` (private management)
+- VPS: `traefik/docker-compose.yml + authelia/docker-compose.yml` (public authentication)
+- Home: `docker-compose.yml + traefik/docker-compose.yml` (private management)
 - Agent environments point to VPS Authelia for authentication
