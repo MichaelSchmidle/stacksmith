@@ -39,6 +39,7 @@ cp .env.example .env
 **Required Variables**:
 - `PIHOLE_HOSTNAME`: Hostname for Pi-hole web interface (e.g., `dns.example.com`)
 - `PIHOLE_PASSWORD`: Admin password for Pi-hole web interface
+- `PIHOLE_HOST_IP`: IP address of the Docker host (e.g., `192.168.1.100`)
 
 **Optional Variables**:
 - `PIHOLE_WEB_PORT`: Internal web server port (default: `8080`)
@@ -224,6 +225,22 @@ docker compose exec pihole tail -f /var/log/pihole.log
 ```
 
 ## Troubleshooting
+
+### Port Conflicts
+
+**DNS Port 53 Already in Use**:
+If you encounter "address already in use" errors for port 53 during deployment, another DNS service is likely running on the host.
+
+**Recommended Solution - Bind to Specific IP**:
+The Pi-hole service is configured to bind DNS ports to a specific IP address rather than all interfaces (`0.0.0.0`). This avoids conflicts with system DNS services:
+
+1. **Set your Docker host IP** in `.env`:
+   ```bash
+   PIHOLE_HOST_IP=192.168.1.100  # Replace with your actual host IP
+   ```
+
+2. **Configure your gateway** to use this specific IP as upstream DNS server
+
 
 ### Common Issues
 

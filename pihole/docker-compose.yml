@@ -6,8 +6,10 @@ services:
     networks:
       - stacksmith
     ports:
-      - "${PIHOLE_DNS_PORT:-53}:53/tcp"
-      - "${PIHOLE_DNS_PORT:-53}:53/udp"
+      - "${PIHOLE_HOST_IP}:${PIHOLE_DNS_PORT:-53}:53/tcp"
+      - "${PIHOLE_HOST_IP}:${PIHOLE_DNS_PORT:-53}:53/udp"
+    extra_hosts:
+      - "${PIHOLE_HOSTNAME}:${PIHOLE_HOST_IP}"
     environment:
       TZ: "${TZ:-UTC}"
       FTLCONF_webserver_api_password: "${PIHOLE_PASSWORD}"
