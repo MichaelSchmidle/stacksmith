@@ -68,6 +68,14 @@ docker compose up -d
 
 ### With Traefik Reverse Proxy
 ```bash
+# Configure environment
+cp .env.example .env
+cp traefik/.env.example traefik/.env
+# Edit .env files with your settings
+
+# Create external network
+docker network create stacksmith
+
 # Deploy Portainer with Traefik
 docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
 
@@ -76,6 +84,15 @@ docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
 
 ### With Full Authentication Stack
 ```bash
+# Configure environment
+cp .env.example .env
+cp traefik/.env.example traefik/.env
+cp jumpcloud/.env.example jumpcloud/.env
+# Edit .env files with your settings
+
+# Create external network
+docker network create stacksmith
+
 # Deploy complete management stack
 docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f jumpcloud/docker-compose.yml up -d
 ```
@@ -84,13 +101,15 @@ docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f jumpcloud/
 
 **Home Lab Setup**:
 ```bash
-# Management + Reverse Proxy
+# Create network and deploy management + reverse proxy
+docker network create stacksmith
 docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
 ```
 
 **Enterprise Setup**:
 ```bash
-# Full stack with authentication
+# Create network and deploy full stack with authentication
+docker network create stacksmith
 docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f jumpcloud/docker-compose.yml up -d
 ```
 
