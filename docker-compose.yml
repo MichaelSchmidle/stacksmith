@@ -18,7 +18,7 @@ services:
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
 
 networks:
-  stacksmith:
+  traefik:
     external: false
 
 volumes:

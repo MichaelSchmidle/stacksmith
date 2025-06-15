@@ -27,7 +27,7 @@ services:
       - "traefik.http.services.pihole.loadbalancer.server.port=${PIHOLE_WEB_PORT:-8080}"
 
 networks:
-  stacksmith:
+  traefik:
     external: true
 
 volumes:

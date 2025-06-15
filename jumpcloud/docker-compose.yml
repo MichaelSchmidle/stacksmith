@@ -26,5 +26,5 @@ services:
       - "traefik.http.middlewares.jumpcloud-auth.forwardauth.authResponseHeaders=X-Forwarded-User,X-Forwarded-Email,X-Forwarded-Groups"
 
 networks:
-  stacksmith:
+  traefik:
     external: true
