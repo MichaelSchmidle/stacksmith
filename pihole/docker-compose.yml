@@ -1,6 +1,7 @@
 services:
   pihole:
     image: pihole/pihole:latest
+    container_name: stacksmith_pihole
     restart: unless-stopped
     networks:
       - stacksmith

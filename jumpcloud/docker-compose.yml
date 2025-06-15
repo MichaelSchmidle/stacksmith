@@ -1,7 +1,7 @@
 services:
   jumpcloud-auth:
     image: thomseddon/traefik-forward-auth:latest
-    container_name: jumpcloud-auth
+    container_name: stacksmith_jumpcloud-auth
     restart: unless-stopped
     environment:
       - DEFAULT_PROVIDER=oidc

@@ -1,7 +1,7 @@
 services:
   portainer:
     image: portainer/portainer-ce:latest
-    container_name: portainer
+    container_name: stacksmith_portainer
     restart: unless-stopped
     environment:
       - LOG_LEVEL=DEBUG  # Enable for OAuth troubleshooting
