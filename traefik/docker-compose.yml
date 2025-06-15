@@ -13,11 +13,10 @@ services:
       - --entrypoints.websecure.address=:443
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
-      - --certificatesresolvers.cloudflare.acme.dnschallenge=true
-      - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
-      - --certificatesresolvers.cloudflare.acme.email=${ACME_EMAIL}
-      - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
-      - --certificatesresolvers.cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53
+      - --certificatesresolvers.stacksmith.acme.dnschallenge=true
+      - --certificatesresolvers.stacksmith.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.stacksmith.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.stacksmith.acme.storage=/letsencrypt/acme.json
     ports:
       - "${TRAEFIK_INTERFACE:-0.0.0.0}:80:80"
       - "${TRAEFIK_INTERFACE:-0.0.0.0}:443:443"
@@ -33,7 +32,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik-dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
-      - "traefik.http.routers.traefik-dashboard.tls.certresolver=cloudflare"
+      - "traefik.http.routers.traefik-dashboard.tls.certresolver=stacksmith"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
       - "traefik.http.routers.traefik-dashboard.middlewares=authelia@docker"
       - "traefik.http.middlewares.authelia.forwardauth.address=http://${AUTHELIA_HOST:-authelia}:9091/api/verify?rd=https://${AUTHELIA_HOSTNAME}"
