@@ -11,9 +11,8 @@ services:
       TZ: "${TZ:-UTC}"
       FTLCONF_webserver_api_password: "${PIHOLE_PASSWORD}"
       FTLCONF_dns_listeningMode: "all"
-      FTLCONF_dns_upstreams: "${PIHOLE_DNS_UPSTREAMS:-8.8.8.8;8.8.4.4;1.1.1.1;1.0.0.1}"
+      FTLCONF_dns_upstreams: "${PIHOLE_DNS_UPSTREAMS:-1.1.1.1;1.0.0.1;9.9.9.9;149.112.112.112}"
       FTLCONF_webserver_port: "${PIHOLE_WEB_PORT:-8080}"
-      PIHOLE_DNS_: "${PIHOLE_DNS_SERVERS:-8.8.8.8;8.8.4.4}"
       DHCP_ACTIVE: false
     volumes:
       - pihole-config:/etc/pihole

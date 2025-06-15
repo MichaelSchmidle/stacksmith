@@ -43,23 +43,40 @@ cp .env.example .env
 **Optional Variables**:
 - `PIHOLE_WEB_PORT`: Internal web server port (default: `8080`)
 - `PIHOLE_DNS_PORT`: DNS server port (default: `53`)
-- `PIHOLE_DNS_UPSTREAMS`: Upstream DNS servers (default: Google/Cloudflare DNS)
-- `PIHOLE_DNS_SERVERS`: Secondary DNS servers
+- `PIHOLE_DNS_UPSTREAMS`: Upstream DNS servers Pi-hole forwards to (default: Google/Cloudflare DNS)
 - `TZ`: Timezone (default: `UTC`)
 
 ### Upstream DNS Configuration
 
 Configure which DNS servers Pi-hole forwards to:
-```bash
-# Example upstream DNS servers
-PIHOLE_DNS_UPSTREAMS=8.8.8.8;8.8.4.4;1.1.1.1;1.0.0.1
 
-# Alternative: Cloudflare only
+#### Standard DNS (Fast)
+```bash
+# Cloudflare + Quad9 (recommended)
+PIHOLE_DNS_UPSTREAMS=1.1.1.1;1.0.0.1;9.9.9.9;149.112.112.112
+
+# Cloudflare only
 PIHOLE_DNS_UPSTREAMS=1.1.1.1;1.0.0.1
 
-# Alternative: Quad9
+# Quad9 only (privacy-focused)
 PIHOLE_DNS_UPSTREAMS=9.9.9.9;149.112.112.112
 ```
+
+#### DNS-over-HTTPS (Secure/Private)
+```bash
+# Cloudflare + Quad9 DoH
+PIHOLE_DNS_UPSTREAMS=https://1.1.1.1/dns-query;https://1.0.0.1/dns-query;https://dns.quad9.net/dns-query
+
+# Cloudflare DoH only
+PIHOLE_DNS_UPSTREAMS=https://1.1.1.1/dns-query;https://1.0.0.1/dns-query
+
+# AdGuard DoH (additional filtering)
+PIHOLE_DNS_UPSTREAMS=https://dns.adguard.com/dns-query
+```
+
+**DoH vs Standard DNS:**
+- **Standard DNS**: Faster, less overhead, easier to troubleshoot
+- **DNS-over-HTTPS**: Encrypted queries, better privacy, slightly slower
 
 ## Deployment
 
