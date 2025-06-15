@@ -12,7 +12,7 @@ Portainer OAuth configuration must be done through the web UI after deployment. 
 
 ### 2. Configure Application Settings
 - **Application Name**: `Portainer`
-- **Redirect URI**: `https://mgmt.j2.ms` (your `PORTAINER_HOSTNAME`)
+- **Redirect URI**: `https://mgmt.example.com` (your `PORTAINER_HOSTNAME`)
 - **Client Authentication**: `Client Secret Post` or `Client Secret Basic`
 - **Grant Types**: `Authorization Code`
 - **Scopes**: `openid`, `profile`, `email`
@@ -26,7 +26,7 @@ Save the following for Portainer configuration:
 
 ### 1. Access Portainer Web UI
 1. Deploy your stack: `docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f jumpcloud/docker-compose.yml up -d`
-2. Access Portainer at `https://mgmt.j2.ms`
+2. Access Portainer at `https://mgmt.example.com`
 3. Complete initial admin setup if not done already
 
 ### 2. Configure OAuth in Portainer
@@ -41,7 +41,7 @@ Save the following for Portainer configuration:
 - **Authorization URL**: `https://oauth.id.jumpcloud.com/oauth2/auth`
 - **Access Token URL**: `https://oauth.id.jumpcloud.com/oauth2/token`
 - **Resource URL**: `https://oauth.id.jumpcloud.com/userinfo`
-- **Redirect URL**: `https://mgmt.j2.ms` (auto-filled, should match your hostname)
+- **Redirect URL**: `https://mgmt.example.com` (auto-filled, should match your hostname)
 - **User Identifier**: `email` (recommended) or `sub`
 - **Scopes**: `openid profile email`
 

@@ -40,7 +40,7 @@ services:
       - "traefik.http.middlewares.jumpcloud-auth.forwardauth.authResponseHeaders=X-Forwarded-User,X-Forwarded-Email,X-Forwarded-Groups"
 
 networks:
-  traefik:
+  stacksmith:
     external: false
 
 volumes:

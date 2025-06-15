@@ -2,7 +2,11 @@ services:
   pihole:
     image: pihole/pihole:latest
     restart: unless-stopped
-    network_mode: host
+    networks:
+      - traefik
+    ports:
+      - "${PIHOLE_DNS_PORT:-53}:53/tcp"
+      - "${PIHOLE_DNS_PORT:-53}:53/udp"
     environment:
       TZ: "${TZ:-UTC}"
       FTLCONF_webserver_api_password: "${PIHOLE_PASSWORD}"
@@ -10,21 +14,10 @@ services:
       FTLCONF_dns_upstreams: "${PIHOLE_DNS_UPSTREAMS:-8.8.8.8;8.8.4.4;1.1.1.1;1.0.0.1}"
       FTLCONF_webserver_port: "${PIHOLE_WEB_PORT:-8080}"
       PIHOLE_DNS_: "${PIHOLE_DNS_SERVERS:-8.8.8.8;8.8.4.4}"
-      DHCP_ACTIVE: "${PIHOLE_DHCP_ACTIVE:-true}"
-      DHCP_START: "${PIHOLE_DHCP_START:-192.168.1.100}"
-      DHCP_END: "${PIHOLE_DHCP_END:-192.168.1.200}"
-      DHCP_ROUTER: "${PIHOLE_DHCP_ROUTER:-192.168.1.1}"
-      DHCP_LEASETIME: "${PIHOLE_DHCP_LEASETIME:-24}"
-      PIHOLE_DOMAIN: "${PIHOLE_DOMAIN:-local}"
-      DHCP_IPv6: "${PIHOLE_DHCP_IPV6:-false}"
-      DHCP_rapid_commit: "${PIHOLE_DHCP_RAPID_COMMIT:-false}"
+      DHCP_ACTIVE: false
     volumes:
       - pihole-config:/etc/pihole
       - pihole-dnsmasq:/etc/dnsmasq.d
-    cap_add:
-      - NET_ADMIN
-      - SYS_TIME
-      - SYS_NICE
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.pihole.rule=Host(`${PIHOLE_HOSTNAME}`)"
@@ -32,6 +25,10 @@ services:
       - "traefik.http.routers.pihole.tls.certresolver=stacksmith"
       - "traefik.http.routers.pihole.middlewares=jumpcloud-auth@docker"
       - "traefik.http.services.pihole.loadbalancer.server.port=${PIHOLE_WEB_PORT:-8080}"
+
+networks:
+  stacksmith:
+    external: true
 
 volumes:
   pihole-config:
