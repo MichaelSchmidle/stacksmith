@@ -9,7 +9,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer-data:/data
     networks:
-      - traefik
+      - stacksmith
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_HOSTNAME}`)"
@@ -18,8 +18,8 @@ services:
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
 
 networks:
-  traefik:
-    external: false
+  stacksmith:
+    external: true
 
 volumes:
   portainer-data:

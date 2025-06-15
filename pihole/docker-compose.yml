@@ -3,7 +3,7 @@ services:
     image: pihole/pihole:latest
     restart: unless-stopped
     networks:
-      - traefik
+      - stacksmith
     ports:
       - "${PIHOLE_DNS_PORT:-53}:53/tcp"
       - "${PIHOLE_DNS_PORT:-53}:53/udp"
@@ -26,7 +26,7 @@ services:
       - "traefik.http.services.pihole.loadbalancer.server.port=${PIHOLE_WEB_PORT:-8080}"
 
 networks:
-  traefik:
+  stacksmith:
     external: true
 
 volumes:

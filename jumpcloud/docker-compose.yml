@@ -14,7 +14,7 @@ services:
       - AUTH_HOST=${JUMPCLOUD_AUTH_HOSTNAME}
       - URL_PATH=/_oauth
     networks:
-      - traefik
+      - stacksmith
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.jumpcloud-auth.rule=Host(`${JUMPCLOUD_AUTH_HOSTNAME}`)"
@@ -26,5 +26,5 @@ services:
       - "traefik.http.middlewares.jumpcloud-auth.forwardauth.authResponseHeaders=X-Forwarded-User,X-Forwarded-Email,X-Forwarded-Groups"
 
 networks:
-  traefik:
+  stacksmith:
     external: true

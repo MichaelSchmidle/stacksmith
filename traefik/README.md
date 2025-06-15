@@ -53,18 +53,27 @@ cp .env.example .env
 cp .env.example .env
 # Edit .env with your settings
 
+# Create external network
+docker network create stacksmith
+
 # Deploy Traefik
 docker compose up -d
 ```
 
 ### With JumpCloud Authentication
 ```bash
+# Create external network
+docker network create stacksmith
+
 # Deploy Traefik + JumpCloud auth
 docker compose -f docker-compose.yml -f ../jumpcloud/docker-compose.yml up -d
 ```
 
 ### With Other Services
 ```bash
+# Create external network (if not already created)
+docker network create stacksmith
+
 # Deploy management stack (Portainer + Traefik)
 docker compose -f ../docker-compose.yml -f docker-compose.yml up -d
 
@@ -81,7 +90,7 @@ Services can be added to Traefik by:
 1. **Joining the network**:
    ```yaml
    networks:
-     - traefik
+     - stacksmith
    ```
 
 2. **Adding labels**:
@@ -146,8 +155,8 @@ docker compose exec traefik cat /etc/traefik/traefik.yml
 
 **Network Connectivity**:
 ```bash
-# List Traefik network members
-docker network inspect traefik
+# List Stacksmith network members
+docker network inspect stacksmith
 
 # Test service connectivity
 docker compose exec traefik nslookup [service-name]

@@ -27,7 +27,7 @@ services:
       - ./dynamic:/etc/traefik/dynamic:ro
       - traefik-certificates:/letsencrypt
     networks:
-      - traefik
+      - stacksmith
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik-dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
@@ -40,8 +40,9 @@ services:
       - "traefik.http.middlewares.jumpcloud-auth.forwardauth.authResponseHeaders=X-Forwarded-User,X-Forwarded-Email,X-Forwarded-Groups"
 
 networks:
-  traefik:
-    external: false
+  stacksmith:
+    name: stacksmith
+    external: true
 
 volumes:
   traefik-certificates:

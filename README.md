@@ -234,7 +234,7 @@ curl http://localhost:9000
 docker compose logs traefik | grep portainer
 
 # Verify network connectivity
-docker network inspect traefik | grep portainer
+docker network inspect stacksmith | grep portainer
 ```
 
 **OAuth Authentication Issues**:
