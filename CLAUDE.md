@@ -16,6 +16,7 @@ Stacksmith is a Docker stack management system for Portainer environments with f
 ### Service Templates
 - **`traefik/`**: Traefik reverse proxy service with dynamic configuration and environment variables
 - **`authelia/`**: Standalone Authelia authentication service with Duo 2FA integration
+- **`pihole/`**: Pi-hole DNS and DHCP service with Traefik integration and Authelia authentication
 
 ### Key Design Decisions
 - **Decoupled Authelia**: Can be deployed independently on publicly accessible environment (e.g., VPS)
@@ -26,6 +27,7 @@ Stacksmith is a Docker stack management system for Portainer environments with f
 - **Management Environment**: `.env.example` (Portainer variables)
 - **Traefik Environment**: `traefik/.env.example` (Traefik-specific variables)
 - **Auth Environment**: `authelia/.env.example` (Authelia + Traefik variables)
+- **Pi-hole Environment**: `pihole/.env.example` (Pi-hole DNS/DHCP + Traefik variables)
 - **Agent Environments**: Use `traefik/.env.example` with remote Authelia references
 
 ## Common Commands
@@ -58,25 +60,42 @@ cp traefik/.env.example .env
 docker compose -f traefik/docker-compose.yml up -d
 ```
 
+### Pi-hole DNS/DHCP Environment Deployment
+```bash
+# Configure Pi-hole environment
+cp pihole/.env.example .env
+
+# Start Pi-hole with Traefik (requires host networking for DHCP)
+docker compose -f traefik/docker-compose.yml -f pihole/docker-compose.yml up -d
+
+# Alternative: Pi-hole only (without reverse proxy)
+docker compose -f pihole/docker-compose.yml up -d
+```
+
 ### Service Management
 ```bash
 # View logs for specific services
 docker compose logs -f traefik
 docker compose logs -f authelia
+docker compose logs -f pihole
 
 # Restart services
 docker compose restart traefik
 docker compose restart authelia
+docker compose restart pihole
 ```
 
 ## Critical Configuration Notes
 
 - **Interface Binding**: Use `TRAEFIK_INTERFACE` for flexible public/private binding (defaults to `0.0.0.0`)
 - **Authelia Deployment**: Deploy on publicly accessible environment for proper authentication browser redirects
-- **Ultra-Short Hostnames**: Concise 3-4 character subdomains (`mgmt.j2.ms`, `auth.j2.ms`, `prxy.j2.ms`)
+- **Ultra-Short Hostnames**: Concise 3-4 character subdomains (`mgmt.j2.ms`, `auth.j2.ms`, `prxy.j2.ms`, `dns.j2.ms`)
 - **Remote Connectivity**: Agent environments connect to Authelia via `AUTHELIA_HOST` and `AUTHELIA_HOSTNAME`
 - **Let's Encrypt**: Uses Cloudflare DNS-01 challenge (requires API token)
 - **Default Credentials**: Authelia admin/password (change hash in `users_database.yml`)
+- **Pi-hole DHCP**: Uses host networking mode for DHCP functionality; disable existing DHCP server on router
+- **Pi-hole DNS**: Runs on port 53 (DNS) and custom web port (default 8080) for Traefik integration
+- **DHCP Relay**: UCG Fiber should be configured as DHCP relay pointing to Pi-hole container IP
 
 ## Common Deployment Scenarios
 

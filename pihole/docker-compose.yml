@@ -1,0 +1,38 @@
+services:
+  pihole:
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TZ: "${TZ:-UTC}"
+      FTLCONF_webserver_api_password: "${PIHOLE_PASSWORD}"
+      FTLCONF_dns_listeningMode: "all"
+      FTLCONF_dns_upstreams: "${PIHOLE_DNS_UPSTREAMS:-8.8.8.8;8.8.4.4;1.1.1.1;1.0.0.1}"
+      FTLCONF_webserver_port: "${PIHOLE_WEB_PORT:-8080}"
+      PIHOLE_DNS_: "${PIHOLE_DNS_SERVERS:-8.8.8.8;8.8.4.4}"
+      DHCP_ACTIVE: "${PIHOLE_DHCP_ACTIVE:-true}"
+      DHCP_START: "${PIHOLE_DHCP_START:-192.168.1.100}"
+      DHCP_END: "${PIHOLE_DHCP_END:-192.168.1.200}"
+      DHCP_ROUTER: "${PIHOLE_DHCP_ROUTER:-192.168.1.1}"
+      DHCP_LEASETIME: "${PIHOLE_DHCP_LEASETIME:-24}"
+      PIHOLE_DOMAIN: "${PIHOLE_DOMAIN:-local}"
+      DHCP_IPv6: "${PIHOLE_DHCP_IPV6:-false}"
+      DHCP_rapid_commit: "${PIHOLE_DHCP_RAPID_COMMIT:-false}"
+    volumes:
+      - pihole-config:/etc/pihole
+      - pihole-dnsmasq:/etc/dnsmasq.d
+    cap_add:
+      - NET_ADMIN
+      - SYS_TIME
+      - SYS_NICE
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pihole.rule=Host(`${PIHOLE_HOSTNAME}`)"
+      - "traefik.http.routers.pihole.entrypoints=websecure"
+      - "traefik.http.routers.pihole.tls.certresolver=stacksmith"
+      - "traefik.http.routers.pihole.middlewares=jumpcloud-auth@docker"
+      - "traefik.http.services.pihole.loadbalancer.server.port=${PIHOLE_WEB_PORT:-8080}"
+
+volumes:
+  pihole-config:
+  pihole-dnsmasq:

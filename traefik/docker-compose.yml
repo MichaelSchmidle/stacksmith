@@ -34,10 +34,10 @@ services:
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=stacksmith"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
-      - "traefik.http.routers.traefik-dashboard.middlewares=authelia@docker"
-      - "traefik.http.middlewares.authelia.forwardauth.address=http://${AUTHELIA_HOST:-authelia}:9091/api/verify?rd=https://${AUTHELIA_HOSTNAME}"
-      - "traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true"
-      - "traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
+      - "traefik.http.routers.traefik-dashboard.middlewares=jumpcloud-auth@docker"
+      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.address=http://${JUMPCLOUD_AUTH_HOST:-jumpcloud-auth}:4181"
+      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.authResponseHeaders=X-Forwarded-User,X-Forwarded-Email,X-Forwarded-Groups"
 
 networks:
   traefik:

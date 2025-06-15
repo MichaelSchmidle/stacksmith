@@ -1,0 +1,30 @@
+services:
+  jumpcloud-auth:
+    image: thomseddon/traefik-forward-auth:latest
+    container_name: jumpcloud-auth
+    restart: unless-stopped
+    environment:
+      - DEFAULT_PROVIDER=oidc
+      - PROVIDERS_OIDC_ISSUER_URL=https://oauth.id.jumpcloud.com/oauth2
+      - PROVIDERS_OIDC_CLIENT_ID=${JUMPCLOUD_CLIENT_ID}
+      - PROVIDERS_OIDC_CLIENT_SECRET=${JUMPCLOUD_CLIENT_SECRET}
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN}
+      - SECRET=${AUTH_SECRET}
+      - LOG_LEVEL=info
+      - AUTH_HOST=${JUMPCLOUD_AUTH_HOSTNAME}
+      - URL_PATH=/_oauth
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jumpcloud-auth.rule=Host(`${JUMPCLOUD_AUTH_HOSTNAME}`)"
+      - "traefik.http.routers.jumpcloud-auth.entrypoints=websecure"
+      - "traefik.http.routers.jumpcloud-auth.tls.certresolver=stacksmith"
+      - "traefik.http.services.jumpcloud-auth.loadbalancer.server.port=4181"
+      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.address=http://jumpcloud-auth:4181"
+      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.authResponseHeaders=X-Forwarded-User,X-Forwarded-Email,X-Forwarded-Groups"
+
+networks:
+  traefik:
+    external: true

@@ -3,6 +3,8 @@ services:
     image: portainer/portainer-ce:latest
     container_name: portainer
     restart: unless-stopped
+    environment:
+      - LOG_LEVEL=DEBUG  # Enable for OAuth troubleshooting
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer-data:/data
