@@ -25,7 +25,7 @@ services:
       - CLOUDFLARE_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${COMPOSE_FILE%/*}/dynamic:/etc/traefik/dynamic:ro
+      - ${TRAEFIK_DYNAMIC_DIR:-./dynamic}:/etc/traefik/dynamic:ro
       - traefik-certificates:/letsencrypt
     networks:
       - stacksmith
