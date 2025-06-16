@@ -21,7 +21,7 @@ services:
       - "traefik.http.routers.jumpcloud-auth.entrypoints=websecure"
       - "traefik.http.routers.jumpcloud-auth.tls.certresolver=stacksmith"
       - "traefik.http.services.jumpcloud-auth.loadbalancer.server.port=4181"
-      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.address=http://jumpcloud-auth:4181"
+      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.address=http://${JUMPCLOUD_AUTH_HOSTNAME}:4181"
       - "traefik.http.middlewares.jumpcloud-auth.forwardauth.trustForwardHeader=true"
       - "traefik.http.middlewares.jumpcloud-auth.forwardauth.authResponseHeaders=X-Forwarded-User,X-Forwarded-Email,X-Forwarded-Groups"
 
