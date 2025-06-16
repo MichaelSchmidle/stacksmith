@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       - DEFAULT_PROVIDER=oidc
-      - PROVIDERS_OIDC_ISSUER_URL=https://oauth.id.jumpcloud.com/oauth2
+      - PROVIDERS_OIDC_ISSUER_URL=https://oauth.id.jumpcloud.com/oauth2/auth
       - PROVIDERS_OIDC_CLIENT_ID=${JUMPCLOUD_CLIENT_ID}
       - PROVIDERS_OIDC_CLIENT_SECRET=${JUMPCLOUD_CLIENT_SECRET}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
