@@ -1,0 +1,95 @@
+# qbit_manage Configuration
+# Basic setup for automatic cleanup of completed downloads
+
+qbt:
+  host: "qbittorrent:8080"  # Internal Docker network access
+  user: ""  # Empty for passwordless setup
+  pass: ""  # Empty for passwordless setup
+
+settings:
+  force_auto_tmm: false
+  tracker_error_tag: issue
+  nohardlinks_tag: noHL
+  share_limits_tag: ~share_limit
+  share_limits_min_seeding_time_tag: ~seeding_time
+  share_limits_min_num_seeds_tag: ~min_seeds
+  share_limits_last_active_tag: ~last_active
+  cross_seed_tag: cross-seed
+  noHL_tag: noHL
+  free_space_tag: freespace
+  orphaned_tag: orphaned
+  unregistered_tag: unregistered
+  not_working_tag: not_working
+
+directory:
+  # Root directory inside qbittorrent
+  root_dir: /downloads
+  remote_dir: /downloads
+  recycle_bin: /downloads/.RecycleBin
+  torrents_dir: /downloads/.torrents
+  orphaned_dir: /downloads/.orphaned
+
+cat:
+  # Categories to manage
+  sonarr:
+    save_path: /downloads/complete/sonarr
+  radarr:
+    save_path: /downloads/complete/radarr
+
+# Share limit rules (main cleanup logic)
+share_limits:
+  # Remove torrents that have reached 1.0 ratio
+  ratio_1.0:
+    priority: 1
+    include_all_tags:
+      - ~share_limit
+    max_ratio: 1.0
+    min_seeding_time: 60  # At least 1 hour of seeding
+    last_activity: 172800  # 48 hours of inactivity
+    cleanup: true
+    
+  # Remove very old torrents regardless of ratio (safety net)
+  old_torrents:
+    priority: 2
+    include_all_tags:
+      - ~share_limit
+    min_seeding_time: 604800  # 7 days minimum seeding
+    cleanup: true
+
+# Automatic rules that apply to all torrents
+rules:
+  # Automatically tag all torrents for share limit management
+  tag_share_limits:
+    priority: 1
+    include_all_tags: []
+    actions:
+      - type: tag
+        tags:
+          - ~share_limit
+
+  # Clean up torrents without files (orphaned)
+  remove_orphaned:
+    priority: 10
+    include_all_tags:
+      - orphaned
+    actions:
+      - type: rem_tor
+        cleanup: true
+
+  # Clean up unregistered torrents
+  remove_unregistered:
+    priority: 11
+    include_all_tags:
+      - unregistered
+    actions:
+      - type: rem_tor
+        cleanup: true
+
+  # Clean up not working torrents
+  remove_not_working:
+    priority: 12
+    include_all_tags:
+      - not_working
+    actions:
+      - type: rem_tor
+        cleanup: true

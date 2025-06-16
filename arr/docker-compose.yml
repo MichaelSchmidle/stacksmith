@@ -1,0 +1,136 @@
+services:
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: stacksmith_sonarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - sonarr-config:/config
+      - ${DOWNLOADS_PATH}:/downloads
+      - ${PVRS_PATH}:/series
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr.rule=Host(`${SONARR_HOSTNAME}`)"
+      - "traefik.http.routers.sonarr.entrypoints=websecure"
+      - "traefik.http.routers.sonarr.tls.certresolver=stacksmith"
+      - "traefik.http.routers.sonarr.middlewares=jumpcloud-auth@docker"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: stacksmith_radarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - radarr-config:/config
+      - ${DOWNLOADS_PATH}:/downloads
+      - ${PVRM_PATH}:/movies
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr.rule=Host(`${RADARR_HOSTNAME}`)"
+      - "traefik.http.routers.radarr.entrypoints=websecure"
+      - "traefik.http.routers.radarr.tls.certresolver=stacksmith"
+      - "traefik.http.routers.radarr.middlewares=jumpcloud-auth@docker"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: stacksmith_prowlarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - prowlarr-config:/config
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prowlarr.rule=Host(`${PROWLARR_HOSTNAME}`)"
+      - "traefik.http.routers.prowlarr.entrypoints=websecure"
+      - "traefik.http.routers.prowlarr.tls.certresolver=stacksmith"
+      - "traefik.http.routers.prowlarr.middlewares=jumpcloud-auth@docker"
+      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: stacksmith_qbittorrent
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+      - QBT_WEBUI_USERNAME=
+      - QBT_WEBUI_PASSWORD=
+      - TORRENTING_PORT=${TORRENT_PORT}
+    volumes:
+      - qbittorrent-config:/config
+      - ${DOWNLOADS_PATH}:/downloads
+    ports:
+      - "${TORRENT_PORT}:${TORRENT_PORT}"
+      - "${TORRENT_PORT}:${TORRENT_PORT}/udp"
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      # Web UI only (protected by JumpCloud OAuth)
+      - "traefik.http.routers.qbittorrent.rule=Host(`${QBITTORRENT_HOSTNAME}`)"
+      - "traefik.http.routers.qbittorrent.entrypoints=websecure"
+      - "traefik.http.routers.qbittorrent.tls.certresolver=stacksmith"
+      - "traefik.http.routers.qbittorrent.middlewares=jumpcloud-auth@docker"
+      - "traefik.http.services.qbittorrent.loadbalancer.server.port=8080"
+
+  recyclarr:
+    image: ghcr.io/recyclarr/recyclarr:latest
+    container_name: stacksmith_recyclarr
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - recyclarr-config:/config
+    networks:
+      - stacksmith
+    depends_on:
+      - sonarr
+      - radarr
+
+  qbit-manage:
+    image: bobokun/qbit_manage:latest
+    container_name: stacksmith_qbit-manage
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - qbit-manage-config:/config
+      - ./qbit-manage-config.yml:/config/config.yml:ro
+      - ${DOWNLOADS_PATH}:/downloads
+    networks:
+      - stacksmith
+    depends_on:
+      - qbittorrent
+
+networks:
+  stacksmith:
+    external: true
+
+volumes:
+  sonarr-config:
+  radarr-config:
+  prowlarr-config:
+  qbittorrent-config:
+  recyclarr-config:
+  qbit-manage-config:
