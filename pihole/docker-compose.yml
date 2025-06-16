@@ -8,9 +8,9 @@ services:
     ports:
       - "${PIHOLE_DNS_IP}:${PIHOLE_DNS_PORT:-53}:53/tcp"
       - "${PIHOLE_DNS_IP}:${PIHOLE_DNS_PORT:-53}:53/udp"
-      - "${PIHOLE_WEB_IP}:${PIHOLE_WEB_PORT:-8080}:${PIHOLE_WEB_PORT:-8080}/tcp"
     extra_hosts:
-      - "${PIHOLE_HOSTNAME}:${PIHOLE_WEB_IP}"
+      - "${PIHOLE_DNS_HOSTNAME}:${PIHOLE_DNS_IP}"
+      - "${PIHOLE_WEB_HOSTNAME}:${PIHOLE_WEB_IP}"
     environment:
       TZ: "${TZ:-UTC}"
       FTLCONF_webserver_api_password: "${PIHOLE_PASSWORD}"
@@ -26,7 +26,7 @@ services:
       - pihole-dnsmasq:/etc/dnsmasq.d
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.pihole.rule=Host(`${PIHOLE_HOSTNAME}`)"
+      - "traefik.http.routers.pihole.rule=Host(`${PIHOLE_WEB_HOSTNAME}`)"
       - "traefik.http.routers.pihole.entrypoints=websecure"
       - "traefik.http.routers.pihole.tls.certresolver=stacksmith"
       - "traefik.http.routers.pihole.middlewares=jumpcloud-auth@docker"
