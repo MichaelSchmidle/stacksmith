@@ -6,10 +6,11 @@ services:
     networks:
       - stacksmith
     ports:
-      - "${PIHOLE_HOST_IP}:${PIHOLE_DNS_PORT:-53}:53/tcp"
-      - "${PIHOLE_HOST_IP}:${PIHOLE_DNS_PORT:-53}:53/udp"
+      - "${PIHOLE_DNS_IP}:${PIHOLE_DNS_PORT:-53}:53/tcp"
+      - "${PIHOLE_DNS_IP}:${PIHOLE_DNS_PORT:-53}:53/udp"
+      - "${PIHOLE_WEB_IP}:${PIHOLE_WEB_PORT:-8080}:${PIHOLE_WEB_PORT:-8080}/tcp"
     extra_hosts:
-      - "${PIHOLE_HOSTNAME}:${PIHOLE_HOST_IP}"
+      - "${PIHOLE_HOSTNAME}:${PIHOLE_WEB_IP}"
     environment:
       TZ: "${TZ:-UTC}"
       FTLCONF_webserver_api_password: "${PIHOLE_PASSWORD}"
@@ -17,6 +18,9 @@ services:
       FTLCONF_dns_upstreams: "${PIHOLE_DNS_UPSTREAMS:-1.1.1.1;1.0.0.1;9.9.9.9;149.112.112.112}"
       FTLCONF_webserver_port: "${PIHOLE_WEB_PORT:-8080}"
       DHCP_ACTIVE: false
+    cap_add:
+      - SYS_NICE
+      - SYS_TIME
     volumes:
       - pihole-config:/etc/pihole
       - pihole-dnsmasq:/etc/dnsmasq.d
@@ -25,6 +29,7 @@ services:
       - "traefik.http.routers.pihole.rule=Host(`${PIHOLE_HOSTNAME}`)"
       - "traefik.http.routers.pihole.entrypoints=websecure"
       - "traefik.http.routers.pihole.tls.certresolver=stacksmith"
+      - "traefik.http.routers.pihole.middlewares=jumpcloud-auth@docker"
       - "traefik.http.services.pihole.loadbalancer.server.port=${PIHOLE_WEB_PORT:-8080}"
 
 networks:
