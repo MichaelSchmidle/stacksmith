@@ -36,7 +36,7 @@ services:
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=stacksmith"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
       - "traefik.http.routers.traefik-dashboard.middlewares=jumpcloud-auth@docker"
-      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.address=http://${JUMPCLOUD_AUTH_HOSTNAME}:4181"
+      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.address=https://${JUMPCLOUD_AUTH_HOSTNAME}:443"
       - "traefik.http.middlewares.jumpcloud-auth.forwardauth.trustForwardHeader=true"
       - "traefik.http.middlewares.jumpcloud-auth.forwardauth.authResponseHeaders=X-Forwarded-User,X-Forwarded-Email,X-Forwarded-Groups"
 
