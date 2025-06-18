@@ -75,6 +75,7 @@ services:
       - QBT_WEBUI_USERNAME=
       - QBT_WEBUI_PASSWORD=
       - TORRENTING_PORT=${TORRENT_PORT}
+      - QBT_BYPASS_AUTH_SUBNET_WHITELIST=${QBT_BYPASS_AUTH_SUBNET_WHITELIST}
     volumes:
       - qbittorrent-config:/config
       - ${DOWNLOADS_PATH}:/downloads
