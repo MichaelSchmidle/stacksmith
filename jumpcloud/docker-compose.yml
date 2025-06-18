@@ -13,6 +13,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - AUTH_HOST=${JUMPCLOUD_AUTH_HOSTNAME}
       - URL_PATH=/_oauth
+      - DEFAULT_ACTION=auth
     networks:
       - stacksmith
     labels:
