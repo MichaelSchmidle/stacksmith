@@ -35,11 +35,13 @@ services:
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=stacksmith"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
-      - "traefik.http.routers.traefik-dashboard.middlewares=jumpcloud-auth"
-      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.address=https://${JUMPCLOUD_AUTH_HOSTNAME}/oauth2/auth"
-      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.trustForwardHeader=true"
-      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.authResponseHeaders=X-Forwarded-User,X-Forwarded-Email,X-Forwarded-Groups"
-      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.authRequestHeaders=X-Forwarded-Host,X-Forwarded-Uri"
+      - "traefik.http.routers.traefik-dashboard.middlewares=oauth-errors,oauth-verify"
+      - "traefik.http.middlewares.oauth-verify.forwardauth.address=https://${JUMPCLOUD_AUTH_HOSTNAME}/oauth2/auth"
+      - "traefik.http.middlewares.oauth-verify.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.oauth-verify.forwardauth.authResponseHeaders=X-Auth-Request-User,X-Auth-Request-Email"
+      - "traefik.http.middlewares.oauth-errors.errors.status=401-403"
+      - "traefik.http.middlewares.oauth-errors.errors.service=jumpcloud-auth@docker"
+      - "traefik.http.middlewares.oauth-errors.errors.query=/oauth2/sign_in"
 
 networks:
   stacksmith:
