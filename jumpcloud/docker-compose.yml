@@ -13,6 +13,7 @@ services:
       - LOG_LEVEL=info
       - AUTH_HOST=${JUMPCLOUD_AUTH_HOSTNAME}
       - URL_PATH=/_oauth
+      - INSECURE_COOKIE=false
     networks:
       - stacksmith
     labels:
