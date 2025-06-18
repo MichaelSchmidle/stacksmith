@@ -35,7 +35,10 @@ services:
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=stacksmith"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
-      - "traefik.http.routers.traefik-dashboard.middlewares=oauth2-proxy@file"
+      - "traefik.http.routers.traefik-dashboard.middlewares=oauth2-proxy@docker"
+      - "traefik.http.middlewares.oauth2-proxy.forwardauth.address=https://${OAUTH2_PROXY_HOSTNAME}/oauth2/auth"
+      - "traefik.http.middlewares.oauth2-proxy.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.oauth2-proxy.forwardauth.authResponseHeaders=X-Auth-Request-User,X-Auth-Request-Email,X-Auth-Request-Access-Token"
 networks:
   stacksmith:
     name: stacksmith
