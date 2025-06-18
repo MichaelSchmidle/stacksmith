@@ -18,7 +18,7 @@ services:
       - "traefik.http.routers.sonarr.rule=Host(`${SONARR_HOSTNAME}`)"
       - "traefik.http.routers.sonarr.entrypoints=websecure"
       - "traefik.http.routers.sonarr.tls.certresolver=stacksmith"
-      - "traefik.http.routers.sonarr.middlewares=jumpcloud-auth@docker"
+      - "traefik.http.routers.sonarr.middlewares=oidc-errors,oidc-auth"
       - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
 
   radarr:
@@ -40,7 +40,7 @@ services:
       - "traefik.http.routers.radarr.rule=Host(`${RADARR_HOSTNAME}`)"
       - "traefik.http.routers.radarr.entrypoints=websecure"
       - "traefik.http.routers.radarr.tls.certresolver=stacksmith"
-      - "traefik.http.routers.radarr.middlewares=jumpcloud-auth@docker"
+      - "traefik.http.routers.radarr.middlewares=oidc-errors,oidc-auth"
       - "traefik.http.services.radarr.loadbalancer.server.port=7878"
 
   prowlarr:
@@ -60,7 +60,7 @@ services:
       - "traefik.http.routers.prowlarr.rule=Host(`${PROWLARR_HOSTNAME}`)"
       - "traefik.http.routers.prowlarr.entrypoints=websecure"
       - "traefik.http.routers.prowlarr.tls.certresolver=stacksmith"
-      - "traefik.http.routers.prowlarr.middlewares=jumpcloud-auth@docker"
+      - "traefik.http.routers.prowlarr.middlewares=oidc-errors,oidc-auth"
       - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
 
   qbittorrent:
@@ -85,11 +85,11 @@ services:
       - stacksmith
     labels:
       - "traefik.enable=true"
-      # Web UI only (protected by JumpCloud OAuth)
+      # Web UI only (protected by OIDC authentication)
       - "traefik.http.routers.qbittorrent.rule=Host(`${QBITTORRENT_HOSTNAME}`)"
       - "traefik.http.routers.qbittorrent.entrypoints=websecure"
       - "traefik.http.routers.qbittorrent.tls.certresolver=stacksmith"
-      - "traefik.http.routers.qbittorrent.middlewares=jumpcloud-auth@docker"
+      - "traefik.http.routers.qbittorrent.middlewares=oidc-errors,oidc-auth"
       - "traefik.http.services.qbittorrent.loadbalancer.server.port=8080"
 
   recyclarr:

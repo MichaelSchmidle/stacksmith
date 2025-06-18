@@ -18,6 +18,8 @@ services:
       - --certificatesresolvers.stacksmith.acme.dnschallenge.provider=cloudflare
       - --certificatesresolvers.stacksmith.acme.email=${ACME_EMAIL}
       - --certificatesresolvers.stacksmith.acme.storage=/letsencrypt/acme.json
+      - --experimental.plugins.traefikoidc.modulename=github.com/lukaszraczylo/traefikoidc
+      - --experimental.plugins.traefikoidc.version=v0.2.1
     ports:
       - "${TRAEFIK_INTERFACE:-0.0.0.0}:80:80"
       - "${TRAEFIK_INTERFACE:-0.0.0.0}:443:443"
@@ -35,14 +37,7 @@ services:
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=stacksmith"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
-      - "traefik.http.routers.traefik-dashboard.middlewares=oauth-errors,oauth-verify"
-      - "traefik.http.middlewares.oauth-verify.forwardauth.address=https://${JUMPCLOUD_AUTH_HOSTNAME}/oauth2/auth"
-      - "traefik.http.middlewares.oauth-verify.forwardauth.trustForwardHeader=true"
-      - "traefik.http.middlewares.oauth-verify.forwardauth.authResponseHeaders=X-Auth-Request-User,X-Auth-Request-Email"
-      - "traefik.http.middlewares.oauth-errors.errors.status=401-403"
-      - "traefik.http.middlewares.oauth-errors.errors.service=jumpcloud-auth@docker"
-      - "traefik.http.middlewares.oauth-errors.errors.query=/oauth2/sign_in"
-
+      - "traefik.http.routers.traefik-dashboard.middlewares=oidc-errors,oidc-auth"
 networks:
   stacksmith:
     name: stacksmith
