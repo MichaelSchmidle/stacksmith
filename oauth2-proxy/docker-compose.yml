@@ -1,0 +1,31 @@
+services:
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:latest
+    container_name: stacksmith_oauth2_proxy
+    restart: unless-stopped
+    command:
+      - --http-address=0.0.0.0:4180
+      - --redirect-url=https://${OAUTH2_PROXY_HOSTNAME}/oauth2/callback
+      - --oidc-issuer-url=${OIDC_PROVIDER_URL}
+      - --client-id=${OIDC_CLIENT_ID}
+      - --client-secret=${OIDC_CLIENT_SECRET}
+      - --cookie-secret=${OAUTH2_PROXY_COOKIE_SECRET}
+      - --cookie-secure=true
+      - --cookie-domain=.${DOMAIN_NAME}
+      - --email-domain=*
+      - --upstream=static://202
+      - --skip-provider-button=true
+      - --reverse-proxy=true
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.oauth2-proxy.rule=Host(`${OAUTH2_PROXY_HOSTNAME}`) && PathPrefix(`/oauth2`)"
+      - "traefik.http.routers.oauth2-proxy.entrypoints=websecure"
+      - "traefik.http.routers.oauth2-proxy.tls.certresolver=stacksmith"
+      - "traefik.http.services.oauth2-proxy.loadbalancer.server.port=4180"
+
+networks:
+  stacksmith:
+    name: stacksmith
+    external: true

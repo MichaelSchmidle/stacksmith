@@ -1,28 +1,10 @@
 http:
   middlewares:
-    oidc-auth:
-      plugin:
-        traefikoidc:
-          providerURL: "${OIDC_PROVIDER_URL}"
-          clientID: "${OIDC_CLIENT_ID}"
-          clientSecret: "${OIDC_CLIENT_SECRET}"
-          sessionEncryptionKey: "${OIDC_SESSION_ENCRYPTION_KEY}"
-          callbackURL: "/oauth2/callback"
-          scopes:
-            - "openid"
-            - "profile"
-            - "email"
-          logoutURL: "/oauth2/logout"
-          
-    oidc-errors:
-      errors:
-        status:
-          - "401-403"
-        service: "oidc-error-service"
-        query: "/oauth2/error"
-
-  services:
-    oidc-error-service:
-      loadBalancer:
-        servers:
-          - url: "http://localhost"
+    oauth2-proxy:
+      forwardAuth:
+        address: "http://stacksmith_oauth2_proxy:4180/oauth2/auth"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "X-Auth-Request-User"
+          - "X-Auth-Request-Email"
+          - "X-Auth-Request-Access-Token"

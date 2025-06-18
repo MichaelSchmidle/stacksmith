@@ -18,8 +18,6 @@ services:
       - --certificatesresolvers.stacksmith.acme.dnschallenge.provider=cloudflare
       - --certificatesresolvers.stacksmith.acme.email=${ACME_EMAIL}
       - --certificatesresolvers.stacksmith.acme.storage=/letsencrypt/acme.json
-      - --experimental.plugins.traefikoidc.modulename=github.com/lukaszraczylo/traefikoidc
-      - --experimental.plugins.traefikoidc.version=v0.2.1
     ports:
       - "${TRAEFIK_INTERFACE:-0.0.0.0}:80:80"
       - "${TRAEFIK_INTERFACE:-0.0.0.0}:443:443"
@@ -37,7 +35,7 @@ services:
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=stacksmith"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
-      - "traefik.http.routers.traefik-dashboard.middlewares=oidc-errors,oidc-auth"
+      - "traefik.http.routers.traefik-dashboard.middlewares=oauth2-proxy"
 networks:
   stacksmith:
     name: stacksmith
