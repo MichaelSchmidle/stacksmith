@@ -38,11 +38,14 @@ cat:
 
 # Share limit rules (main cleanup logic)
 share_limits:
-  # Remove torrents that have reached 1.0 ratio
+  # Remove torrents that have reached 1.0 ratio (only if imported)
   ratio_1.0:
     priority: 1
     include_all_tags:
       - ~share_limit
+    include_any_category:
+      - sonarr
+      - radarr
     max_ratio: 1.0
     min_seeding_time: 60  # At least 1 hour of seeding
     last_activity: 172800  # 48 hours of inactivity
