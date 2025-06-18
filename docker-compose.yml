@@ -13,7 +13,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.portainer.rule=Host(`${PORTAINER_HOSTNAME}`)"
-      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.entrypoints=websecure-tailscale"
       - "traefik.http.routers.portainer.tls.certresolver=stacksmith"
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
 
