@@ -35,7 +35,7 @@ services:
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=stacksmith"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
-      - "traefik.http.routers.traefik-dashboard.middlewares=oauth2-proxy"
+      - "traefik.http.routers.traefik-dashboard.middlewares=oauth2-proxy@file"
 networks:
   stacksmith:
     name: stacksmith
