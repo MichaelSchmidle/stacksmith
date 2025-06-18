@@ -39,7 +39,6 @@ services:
       - "traefik.http.middlewares.jumpcloud-auth.forwardauth.address=https://${JUMPCLOUD_AUTH_HOSTNAME}:443"
       - "traefik.http.middlewares.jumpcloud-auth.forwardauth.trustForwardHeader=true"
       - "traefik.http.middlewares.jumpcloud-auth.forwardauth.authResponseHeaders=X-Forwarded-User,X-Forwarded-Email,X-Forwarded-Groups"
-      - "traefik.http.middlewares.jumpcloud-auth.forwardauth.authRequestHeaders=X-Forwarded-Method,X-Forwarded-Proto,X-Forwarded-Host,X-Forwarded-Uri"
 
 networks:
   stacksmith:
