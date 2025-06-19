@@ -4,13 +4,14 @@ services:
     container_name: stacksmith_actualbudget
     restart: unless-stopped
     environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
       - TZ=${TZ}
     volumes:
       - actualbudget-data:/data
     networks:
       - stacksmith
+    security_opt:
+      - no-new-privileges:true
+    init: true
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.actualbudget.rule=Host(`${ACTUALBUDGET_HOSTNAME}`)"
