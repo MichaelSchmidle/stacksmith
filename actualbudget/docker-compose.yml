@@ -1,0 +1,26 @@
+services:
+  actualbudget:
+    image: actualbudget/actual-server:latest
+    container_name: stacksmith_actualbudget
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - actualbudget-data:/data
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.actualbudget.rule=Host(`${ACTUALBUDGET_HOSTNAME}`)"
+      - "traefik.http.routers.actualbudget.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.actualbudget.tls.certresolver=stacksmith"
+      - "traefik.http.services.actualbudget.loadbalancer.server.port=5006"
+
+networks:
+  stacksmith:
+    external: true
+
+volumes:
+  actualbudget-data:
