@@ -280,19 +280,28 @@ docker run --rm -v volumename:/data -v $(pwd):/backup alpine tar xzf /backup/bac
 ### Adding New Services
 1. Create service directory: `mkdir servicename`
 2. Create `docker-compose.yml` following the standard pattern
-3. Create `.env.example` with service-specific variables
-4. Follow Traefik integration patterns:
+3. **ALWAYS create `.env.example`** with service-specific variables
+4. **ALWAYS create `README.md`** with comprehensive documentation
+5. Follow Traefik integration patterns:
    - Use `websecure-tailscale` entrypoint
    - Include required Traefik labels
    - Set correct service port
-5. Use consistent naming: `stacksmith_servicename`
-6. Join `stacksmith` external network
-7. Include standard environment variables (PUID, PGID, TZ)
+6. Use consistent naming: `stacksmith_servicename`
+7. Join `stacksmith` external network
+8. Include standard environment variables (PUID, PGID, TZ)
+
+### Documentation Requirements
+- **CRITICAL**: Every service MUST have both `.env.example` and `README.md` files
+- **Keep Documentation Updated**: When modifying services, update both files accordingly
+- **Environment Variables**: Document all variables in both `.env.example` and `README.md`
+- **Deployment Instructions**: Include complete deployment steps in README
+- **Troubleshooting**: Add common issues and solutions to README
 
 ### Environment Management
 - **No Production Secrets**: Use `.env.example` templates only
 - **Clear Documentation**: Document all environment variables
 - **Secure Defaults**: Provide secure default configurations
+- **Consistency**: Follow the same .env.example format across all services
 
 ## Key Advantages
 

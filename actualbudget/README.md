@@ -35,12 +35,11 @@ Copy `actualbudget/.env.example` to `actualbudget/.env` and configure:
 # Actual Budget Configuration
 ACTUALBUDGET_HOSTNAME=fin.example.com
 
-# User/Group IDs (match your system user)
-PUID=1000
-PGID=1000
-
 # Timezone
 TZ=Europe/Zurich
+
+# Note: PUID/PGID removed to fix systemd cgroup timeout issues on Portainer agents
+# The container runs with default user permissions for better compatibility
 ```
 
 ### Required Configuration
@@ -50,9 +49,10 @@ TZ=Europe/Zurich
 - Ensure DNS points to your Tailscale IP
 - Certificate will be automatically generated via Let's Encrypt
 
-**User/Group IDs**:
-- Match `PUID` and `PGID` to your system user for proper file permissions
-- Use `id` command to find your user and group IDs
+**Container Permissions**:
+- Container runs with default user permissions for Portainer agent compatibility  
+- PUID/PGID variables removed to prevent systemd cgroup timeout issues
+- Data persistence handled through Docker volume management
 
 ## Deployment
 
@@ -125,7 +125,9 @@ docker run --rm -v actualbudget-data:/data -v $(pwd):/backup alpine tar xzf /bac
 - **Tailscale Only**: Service only accessible via Tailscale VPN
 - **Local Data**: All financial data stored locally, not in cloud
 - **HTTPS**: Automatic SSL certificate via Let's Encrypt
-- **File Permissions**: Proper user/group ID configuration
+- **Enhanced Security**: Container runs with `no-new-privileges` security option
+- **Process Management**: Init system enabled for proper signal handling
+- **Portainer Agent Compatible**: Optimized configuration for remote deployment
 - **Regular Backups**: Backup data volume regularly
 
 ## Troubleshooting
@@ -149,8 +151,10 @@ docker compose -f traefik/docker-compose.yml logs traefik | grep actualbudget
 # Check volume permissions
 docker compose -f actualbudget/docker-compose.yml exec actualbudget ls -la /data
 
-# Verify PUID/PGID settings
+# Check container user
 docker compose -f actualbudget/docker-compose.yml exec actualbudget id
+
+# Note: Container runs with default permissions for Portainer agent compatibility
 ```
 
 **Network Connectivity**:

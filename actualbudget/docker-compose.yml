@@ -1,17 +1,18 @@
 services:
   actualbudget:
-    image: actualbudget/actual-server:latest
+    image: docker.io/actualbudget/actual-server:latest
     container_name: stacksmith_actualbudget
     restart: unless-stopped
-    environment:
-      - TZ=${TZ}
     volumes:
       - actualbudget-data:/data
     networks:
       - stacksmith
-    security_opt:
-      - no-new-privileges:true
-    init: true
+    healthcheck:
+      test: ["CMD-SHELL", "node src/scripts/health-check.js"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.actualbudget.rule=Host(`${ACTUALBUDGET_HOSTNAME}`)"

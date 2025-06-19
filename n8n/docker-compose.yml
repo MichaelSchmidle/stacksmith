@@ -1,12 +1,10 @@
 services:
   n8n:
-    image: n8nio/n8n:latest
+    image: docker.n8n.io/n8nio/n8n
     container_name: stacksmith_n8n
     restart: unless-stopped
     environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
+      - GENERIC_TIMEZONE=${TZ}
       - N8N_HOST=${N8N_HOSTNAME}
       - N8N_PORT=5678
       - N8N_PROTOCOL=https
