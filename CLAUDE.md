@@ -35,7 +35,6 @@ Stacksmith is a modular Docker-based infrastructure management system built arou
   - qbit_manage (automated cleanup)
 
 #### Productivity Tools
-- **ActualBudget** (`/actualbudget/`) - Personal finance management
 - **n8n** (`/n8n/`) - Workflow automation platform
 
 ## Common Patterns
