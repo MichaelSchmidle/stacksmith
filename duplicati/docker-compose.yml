@@ -11,7 +11,7 @@ services:
       - SETTINGS_ENCRYPTION_KEY=${SETTINGS_ENCRYPTION_KEY}
     volumes:
       - duplicati-config:/config
-      - ${BACKUP_PATH}:/nas-storage
+      - ${BACKUP_PATH}:/backup
       - /var/lib/docker/volumes:/docker-volumes:ro
     networks:
       - stacksmith
@@ -24,6 +24,7 @@ services:
 
 volumes:
   duplicati-config:
+
 
 networks:
   stacksmith:
