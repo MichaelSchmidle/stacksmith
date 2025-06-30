@@ -1,4 +1,3 @@
----
 services:
   duplicati:
     image: lscr.io/linuxserver/duplicati:latest
@@ -11,7 +10,7 @@ services:
       - DUPLICATI__WEBSERVICE_PASSWORD=${DUPLICATI_WEBSERVICE_PASSWORD}
     volumes:
       - duplicati-config:/config
-      - ${NAS_BACKUP_PATH}:/nas-storage
+      - ${BACKUP_PATH}:/nas-storage
       - /var/lib/docker/volumes:/docker-volumes:ro
     networks:
       - stacksmith
