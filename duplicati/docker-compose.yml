@@ -1,0 +1,30 @@
+---
+services:
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: stacksmith_duplicati
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - DUPLICATI__WEBSERVICE_PASSWORD=${DUPLICATI_WEBSERVICE_PASSWORD}
+    volumes:
+      - duplicati-config:/config
+      - ${NAS_BACKUP_PATH}:/nas-storage
+      - /var/lib/docker/volumes:/docker-volumes:ro
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.duplicati.rule=Host(`${DUPLICATI_HOSTNAME}`)"
+      - "traefik.http.routers.duplicati.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.duplicati.tls.certresolver=stacksmith"
+      - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
+
+volumes:
+  duplicati-config:
+
+networks:
+  stacksmith:
+    external: true
