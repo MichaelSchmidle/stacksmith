@@ -8,6 +8,7 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
       - DUPLICATI__WEBSERVICE_PASSWORD=${DUPLICATI_WEBSERVICE_PASSWORD}
+      - SETTINGS_ENCRYPTION_KEY=${SETTINGS_ENCRYPTION_KEY}
     volumes:
       - duplicati-config:/config
       - ${BACKUP_PATH}:/nas-storage
