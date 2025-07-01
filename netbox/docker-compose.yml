@@ -1,0 +1,66 @@
+services:
+  netbox-db:
+    image: postgres:15
+    container_name: stacksmith_netbox_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${NETBOX_DB_NAME}
+      - POSTGRES_USER=${NETBOX_DB_USER}
+      - POSTGRES_PASSWORD=${NETBOX_DB_PASSWORD}
+    volumes:
+      - netbox-db-data:/var/lib/postgresql/data
+    networks:
+      - stacksmith
+
+  netbox-redis:
+    image: redis:7-alpine
+    container_name: stacksmith_netbox_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${NETBOX_REDIS_PASSWORD}
+    volumes:
+      - netbox-redis-data:/data
+    networks:
+      - stacksmith
+
+  netbox:
+    image: lscr.io/linuxserver/netbox:latest
+    container_name: stacksmith_netbox
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - SUPERUSER_EMAIL=${NETBOX_SUPERUSER_EMAIL}
+      - SUPERUSER_PASSWORD=${NETBOX_SUPERUSER_PASSWORD}
+      - ALLOWED_HOST=${NETBOX_HOSTNAME}
+      - DB_NAME=${NETBOX_DB_NAME}
+      - DB_USER=${NETBOX_DB_USER}
+      - DB_PASSWORD=${NETBOX_DB_PASSWORD}
+      - DB_HOST=netbox-db
+      - DB_PORT=5432
+      - REDIS_HOST=netbox-redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${NETBOX_REDIS_PASSWORD}
+      - SECRET_KEY=${NETBOX_SECRET_KEY}
+    volumes:
+      - netbox-config:/config
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.netbox.rule=Host(`${NETBOX_HOSTNAME}`)"
+      - "traefik.http.routers.netbox.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.netbox.tls.certresolver=stacksmith"
+      - "traefik.http.services.netbox.loadbalancer.server.port=8000"
+    depends_on:
+      - netbox-db
+      - netbox-redis
+
+networks:
+  stacksmith:
+    external: true
+
+volumes:
+  netbox-db-data:
+  netbox-redis-data:
+  netbox-config:

@@ -24,6 +24,7 @@ Stacksmith is a modular Docker-based infrastructure management system built arou
 
 #### Network Services
 - **Pi-hole** (`/pihole/`) - DNS server with ad-blocking capabilities
+- **Netbox** (`/netbox/`) - Network documentation and IP address management
 
 #### Media Management
 - ***arr Stack** (`/arr/`) - Complete media automation suite:
@@ -70,6 +71,7 @@ services:
 - **Traefik integration**: Automatic service discovery via Docker labels
 - **Volume management**: Named volumes for persistence, bind mounts for config
 - **User management**: Consistent PUID/PGID across LinuxServer images
+- **Hostname convention**: Ultra-short 3-4 character hostnames that abstract the function (e.g., `ipam` for network documentation, `dns` for Pi-hole, `mgmt` for Portainer)
 
 ## Network Architecture
 
@@ -112,6 +114,7 @@ CLOUDFLARE_DNS_API_TOKEN=your-cloudflare-api-token
 
 # Service Hostnames
 PIHOLE_WEB_HOSTNAME=dns.example.com
+NETBOX_HOSTNAME=ipam.example.com
 SONARR_HOSTNAME=tvs.example.com
 RADARR_HOSTNAME=movies.example.com
 ```
@@ -136,6 +139,11 @@ docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
 docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f pihole/docker-compose.yml up -d
 ```
 
+#### Add Network Documentation
+```bash
+docker compose -f traefik/docker-compose.yml -f netbox/docker-compose.yml up -d
+```
+
 #### Media Management Stack
 ```bash
 docker compose -f traefik/docker-compose.yml -f arr/docker-compose.yml up -d
@@ -143,7 +151,7 @@ docker compose -f traefik/docker-compose.yml -f arr/docker-compose.yml up -d
 
 #### Full Infrastructure
 ```bash
-docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f pihole/docker-compose.yml -f arr/docker-compose.yml up -d
+docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f pihole/docker-compose.yml -f netbox/docker-compose.yml -f arr/docker-compose.yml up -d
 ```
 
 ## Security Model
@@ -198,6 +206,7 @@ docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f pihole/doc
 
 ### Service Configuration
 - `/pihole/docker-compose.yml` - DNS service configuration
+- `/netbox/docker-compose.yml` - Network documentation service
 - `/arr/docker-compose.yml` - Media management suite
 - `/arr/qbit-manage-config.yml` - Download cleanup configuration
 
@@ -206,6 +215,7 @@ docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f pihole/doc
 - `/PORTAINER_OAUTH_SETUP.md` - OAuth configuration guide
 - `/traefik/README.md` - Traefik service documentation
 - `/pihole/README.md` - Pi-hole service documentation
+- `/netbox/README.md` - Network documentation service documentation
 - `/arr/README.md` - Media stack documentation
 
 ## Common Commands
