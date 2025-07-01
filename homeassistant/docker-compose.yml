@@ -1,0 +1,26 @@
+services:
+  homeassistant:
+    image: lscr.io/linuxserver/homeassistant:latest
+    container_name: stacksmith_homeassistant
+    restart: unless-stopped
+    networks:
+      - stacksmith
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - homeassistant-config:/config
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homeassistant.rule=Host(`${HOMEASSISTANT_HOSTNAME}`)"
+      - "traefik.http.routers.homeassistant.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.homeassistant.tls.certresolver=stacksmith"
+      - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
+
+networks:
+  stacksmith:
+    external: true
+
+volumes:
+  homeassistant-config:
