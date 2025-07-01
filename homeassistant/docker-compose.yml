@@ -11,6 +11,7 @@ services:
       - TZ=${TZ:-UTC}
     volumes:
       - homeassistant-config:/config
+      - ./configuration.yaml:/config/configuration.yaml:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.homeassistant.rule=Host(`${HOMEASSISTANT_HOSTNAME}`)"

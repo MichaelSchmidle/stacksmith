@@ -45,6 +45,27 @@ cp .env.example .env
 - `PGID`: Group ID for file permissions (default: `1000`)
 - `TZ`: Timezone (e.g., `Europe/Zurich`)
 
+### Home Assistant Configuration (Minimal Pre-Config)
+
+This deployment includes minimal pre-configuration to enable Traefik integration while preserving full configurability:
+
+**Pre-configured Elements**:
+- `configuration.yaml`: **Only** reverse proxy settings for Traefik compatibility
+- `default_config`: Enables Home Assistant's standard onboarding flow
+
+**What's Automated**:
+- ✅ **Reverse Proxy**: Trusts Docker network ranges (172.18-21.0.0/16)
+- ✅ **HTTP Security**: X-Forwarded-For enabled for Traefik
+- ✅ **Web Interface Access**: Works immediately through Traefik
+
+**What You Configure**:
+- 🔧 **Initial Setup**: Location, user account, integrations (via Home Assistant UI)
+- 🔧 **Device Integration**: Add your Hue Bridge and other devices
+- 🔧 **Automation**: Create automations, scenes, scripts
+- 🔧 **Advanced Settings**: Database retention, logging, security policies
+
+This approach ensures the service works with your infrastructure immediately while preserving the standard Home Assistant setup experience.
+
 ## Deployment
 
 ### Prerequisites
