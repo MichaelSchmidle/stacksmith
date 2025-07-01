@@ -18,7 +18,6 @@ Stacksmith provides a flexible Docker stack management system with decoupled ser
 - **Reverse Proxy**: Traefik with automatic HTTPS
 - **Authentication**: JumpCloud OAuth integration
 - **DNS Services**: Pi-hole for ad-blocking
-- **Network Documentation**: Netbox for IP address management
 - **Flexible Deployment**: Services deployed where operationally optimal
 
 ## Dependencies
@@ -168,7 +167,6 @@ docker compose up -d portainer
 ```bash
 # Deploy additional services
 docker compose -f docker-compose.yml -f pihole/docker-compose.yml up -d
-docker compose -f traefik/docker-compose.yml -f netbox/docker-compose.yml up -d
 
 # Scale services
 docker compose up -d --scale portainer=1
