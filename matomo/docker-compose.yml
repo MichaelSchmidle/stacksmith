@@ -20,7 +20,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.matomo.rule=Host(`${MATOMO_HOSTNAME}`)"
-      - "traefik.http.routers.matomo.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.matomo.entrypoints=websecure-secondary"
       - "traefik.http.routers.matomo.tls.certresolver=stacksmith"
       - "traefik.http.services.matomo.loadbalancer.server.port=80"
 
