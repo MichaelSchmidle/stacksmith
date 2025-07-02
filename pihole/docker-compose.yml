@@ -11,6 +11,7 @@ services:
     extra_hosts:
       - "${PIHOLE_DNS_HOSTNAME}:${PIHOLE_DNS_IP}"
       - "${PIHOLE_WEB_HOSTNAME}:${PIHOLE_WEB_IP}"
+    hostname: "${PIHOLE_WEB_HOSTNAME}"
     environment:
       TZ: "${TZ:-UTC}"
       FTLCONF_webserver_api_password: "${PIHOLE_PASSWORD}"
