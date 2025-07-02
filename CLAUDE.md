@@ -69,8 +69,8 @@ services:
 # Entrypoint Configuration
 - --entrypoints.web-tailscale.address=:80
 - --entrypoints.websecure-tailscale.address=:443
-- --entrypoints.web-secondary.address=:8080
-- --entrypoints.websecure-secondary.address=:8443
+- --entrypoints.web-secondary.address=:80
+- --entrypoints.websecure-secondary.address=:443
 ```
 
 ### SSL/TLS Management
