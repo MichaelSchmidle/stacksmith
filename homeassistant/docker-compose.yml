@@ -4,7 +4,7 @@ services:
     container_name: stacksmith_homeassistant_init
     volumes:
       - homeassistant-config:/config
-    command: >
+    command: |
       sh -c "
       if [ ! -f /config/configuration.yaml ]; then
         echo 'Creating initial configuration.yaml...'
