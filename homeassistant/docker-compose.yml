@@ -1,8 +1,44 @@
 services:
+  homeassistant-init:
+    image: alpine:latest
+    container_name: stacksmith_homeassistant_init
+    volumes:
+      - homeassistant-config:/config
+    command: >
+      sh -c "
+      if [ ! -f /config/configuration.yaml ]; then
+        echo 'Creating initial configuration.yaml...'
+        cat > /config/configuration.yaml << 'EOF'
+      # Minimal Home Assistant Configuration
+      # This file provides only the essential configuration needed for Traefik integration
+      # All other configuration should be done through the Home Assistant UI after deployment
+
+      # Configure HTTP for reverse proxy (Traefik) - REQUIRED
+      http:
+        # Required for reverse proxy setups
+        use_x_forwarded_for: true
+        # Trust the Docker network ranges where Traefik runs
+        trusted_proxies:
+          - 172.18.0.0/16
+          - 172.19.0.0/16
+          - 172.20.0.0/16
+          - 172.21.0.0/16
+
+      # Default configuration - Home Assistant will prompt for setup via UI
+      default_config:
+      EOF
+        echo 'Initial configuration created successfully'
+      else
+        echo 'Configuration already exists, skipping...'
+      fi
+      "
+
   homeassistant:
     image: lscr.io/linuxserver/homeassistant:latest
     container_name: stacksmith_homeassistant
     restart: unless-stopped
+    depends_on:
+      - homeassistant-init
     networks:
       - stacksmith
     environment:
@@ -11,7 +47,6 @@ services:
       - TZ=${TZ:-UTC}
     volumes:
       - homeassistant-config:/config
-      - ./configuration.yaml:/config/configuration.yaml:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.homeassistant.rule=Host(`${HOMEASSISTANT_HOSTNAME}`)"
