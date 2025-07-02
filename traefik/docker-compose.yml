@@ -12,8 +12,8 @@ services:
       - --providers.file.watch=true
       - --entrypoints.web-tailscale.address=:80
       - --entrypoints.websecure-tailscale.address=:443
-      - --entrypoints.web-secondary.address=:80
-      - --entrypoints.websecure-secondary.address=:443
+      - --entrypoints.web-secondary.address=:8080
+      - --entrypoints.websecure-secondary.address=:8443
       - --entrypoints.web-tailscale.http.redirections.entrypoint.to=websecure-tailscale
       - --entrypoints.web-tailscale.http.redirections.entrypoint.scheme=https
       - --entrypoints.web-secondary.http.redirections.entrypoint.to=websecure-secondary
@@ -25,8 +25,8 @@ services:
     ports:
       - "${TRAEFIK_TAILSCALE_IP}:80:80"
       - "${TRAEFIK_TAILSCALE_IP}:443:443"
-      - "${TRAEFIK_SECONDARY_IP}:80:80"
-      - "${TRAEFIK_SECONDARY_IP}:443:443"
+      - "${TRAEFIK_SECONDARY_IP}:80:8080"
+      - "${TRAEFIK_SECONDARY_IP}:443:8443"
     environment:
       - CLOUDFLARE_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
     volumes:

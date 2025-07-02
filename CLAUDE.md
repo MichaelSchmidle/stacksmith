@@ -66,11 +66,18 @@ services:
 
 ### Traefik Configuration
 ```yaml
-# Entrypoint Configuration
+# Entrypoint Configuration (internal container ports)
 - --entrypoints.web-tailscale.address=:80
 - --entrypoints.websecure-tailscale.address=:443
-- --entrypoints.web-secondary.address=:80
-- --entrypoints.websecure-secondary.address=:443
+- --entrypoints.web-secondary.address=:8080
+- --entrypoints.websecure-secondary.address=:8443
+
+# Port Mappings (external_ip:external_port:internal_port)
+ports:
+  - "${TRAEFIK_TAILSCALE_IP}:80:80"
+  - "${TRAEFIK_TAILSCALE_IP}:443:443"
+  - "${TRAEFIK_SECONDARY_IP}:80:8080"
+  - "${TRAEFIK_SECONDARY_IP}:443:8443"
 ```
 
 ### SSL/TLS Management
