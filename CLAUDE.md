@@ -16,26 +16,11 @@ Stacksmith is a modular Docker-based infrastructure management system built arou
 - **Flexible Deployment**: Services can be deployed where operationally optimal
 - **Self-Hosted Focus**: Complete infrastructure stack without external dependencies
 
-### Service Categories
-
-#### Core Infrastructure
+### Core Infrastructure
 - **Portainer** (`/docker-compose.yml`) - Docker management web interface
 - **Traefik** (`/traefik/`) - Reverse proxy with automatic HTTPS
 
-#### Network Services
-- **Pi-hole** (`/pihole/`) - DNS server with ad-blocking capabilities
-
-#### Media Management
-- ***arr Stack** (`/arr/`) - Complete media automation suite:
-  - Sonarr (TV series management)
-  - Radarr (movie management)
-  - Prowlarr (indexer management)
-  - qBittorrent (download client)
-  - Recyclarr (quality profile management)
-  - qbit_manage (automated cleanup)
-
-#### Productivity Tools
-- **n8n** (`/n8n/`) - Workflow automation platform
+Additional services are available in their respective directories, each with comprehensive documentation in their individual README.md files.
 
 ## Common Patterns
 
@@ -110,11 +95,6 @@ TRAEFIK_SECONDARY_IP=127.0.0.1
 # SSL Configuration
 ACME_EMAIL=your-email@example.com
 CLOUDFLARE_DNS_API_TOKEN=your-cloudflare-api-token
-
-# Service Hostnames
-PIHOLE_WEB_HOSTNAME=dns.example.com
-SONARR_HOSTNAME=tvs.example.com
-RADARR_HOSTNAME=movies.example.com
 ```
 
 ## Deployment Patterns
@@ -125,26 +105,18 @@ RADARR_HOSTNAME=movies.example.com
 docker network create stacksmith
 ```
 
-### Service Composition Examples
-
-#### Core Management Stack
+### Core Management Stack
 ```bash
 docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
 ```
 
-#### Add DNS Service
+### Adding Services
 ```bash
-docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f pihole/docker-compose.yml up -d
-```
+# Deploy any additional service
+docker compose -f traefik/docker-compose.yml -f servicename/docker-compose.yml up -d
 
-#### Media Management Stack
-```bash
-docker compose -f traefik/docker-compose.yml -f arr/docker-compose.yml up -d
-```
-
-#### Full Infrastructure
-```bash
-docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f pihole/docker-compose.yml -f arr/docker-compose.yml up -d
+# Deploy multiple services together
+docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f service1/docker-compose.yml -f service2/docker-compose.yml up -d
 ```
 
 ## Security Model
@@ -164,7 +136,7 @@ docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f pihole/doc
 - **API Token Management**: Scoped tokens for external services
 - **Certificate Automation**: Automated SSL certificate management
 
-## Service-Specific Details
+## Core Infrastructure Details
 
 ### Portainer Configuration
 - **Docker Socket Access**: Full Docker management capabilities
@@ -177,38 +149,6 @@ docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f pihole/doc
 - **Load Balancing**: Built-in load balancing capabilities
 - **Middleware Support**: Authentication, rate limiting, headers
 
-### Pi-hole Integration
-- **Gateway DNS**: Configured as upstream DNS for network gateway
-- **Ad Blocking**: Automatic blocklist updates
-- **Web Interface**: Traefik-proxied admin interface
-- **Network Binding**: Specific IP binding to avoid conflicts
-
-### Media Stack (*arr)
-- **Complete Automation**: End-to-end media management
-- **Quality Management**: Automated quality profiles via Recyclarr
-- **Download Management**: Automated cleanup via qbit_manage
-- **Storage Integration**: Flexible local and NFS storage support
-
-## Configuration Files
-
-### Core Infrastructure
-- `/docker-compose.yml` - Portainer management service
-- `/traefik/docker-compose.yml` - Reverse proxy configuration
-- `/traefik/dynamic/tls.yml` - TLS security settings
-- `/.env.example` - Main environment template
-
-### Service Configuration
-- `/pihole/docker-compose.yml` - DNS service configuration
-- `/arr/docker-compose.yml` - Media management suite
-- `/arr/qbit-manage-config.yml` - Download cleanup configuration
-
-### Documentation
-- `/README.md` - Primary documentation
-- `/PORTAINER_OAUTH_SETUP.md` - OAuth configuration guide
-- `/traefik/README.md` - Traefik service documentation
-- `/pihole/README.md` - Pi-hole service documentation
-- `/arr/README.md` - Media stack documentation
-
 ## Common Commands
 
 ### Prerequisites
@@ -220,7 +160,7 @@ docker network create stacksmith
 ### Service Management
 ```bash
 # Deploy specific service
-docker compose -f traefik/docker-compose.yml up -d
+docker compose -f servicename/docker-compose.yml up -d
 
 # Deploy multiple services together
 docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
@@ -258,18 +198,6 @@ docker run --rm -v volumename:/data -v $(pwd):/backup alpine tar czf /backup/bac
 docker run --rm -v volumename:/data -v $(pwd):/backup alpine tar xzf /backup/backup.tar.gz -C /
 ```
 
-## Operational Patterns
-
-### Volume Management
-- **Named Volumes**: Persistent data storage
-- **Backup Strategy**: Volume backup procedures documented per service
-- **Configuration Persistence**: Service configuration stored in volumes
-
-### Monitoring and Maintenance
-- **Health Checks**: Container health monitoring
-- **Log Management**: Structured logging with configurable levels
-- **Resource Monitoring**: Built-in Docker stats and Portainer monitoring
-
 ## Development and Contribution Guidelines
 
 ### Repository Structure
@@ -283,12 +211,12 @@ docker run --rm -v volumename:/data -v $(pwd):/backup alpine tar xzf /backup/bac
 3. **ALWAYS create `.env.example`** with service-specific variables
 4. **ALWAYS create `README.md`** with comprehensive documentation
 5. Follow Traefik integration patterns:
-   - Use `websecure-tailscale` entrypoint
+   - Use `websecure-tailscale` entrypoint (or `websecure-secondary` if needed)
    - Include required Traefik labels
    - Set correct service port
 6. Use consistent naming: `stacksmith_servicename`
 7. Join `stacksmith` external network
-8. Include standard environment variables (PUID, PGID, TZ)
+8. Include standard environment variables (PUID, PGID, TZ) when applicable
 
 ### Documentation Requirements
 - **CRITICAL**: Every service MUST have both `.env.example` and `README.md` files
@@ -324,3 +252,9 @@ docker run --rm -v volumename:/data -v $(pwd):/backup alpine tar xzf /backup/bac
 - **Enterprise Authentication**: JumpCloud OAuth integration
 
 This repository represents a mature, production-ready Docker infrastructure system suitable for personal use, home labs, or small to medium business deployments.
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

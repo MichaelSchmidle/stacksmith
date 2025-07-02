@@ -1,0 +1,23 @@
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: stacksmith_uptime_kuma
+    restart: unless-stopped
+    volumes:
+      - uptime-kuma-data:/app/data
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.uptime-kuma.rule=Host(`${UPTIME_KUMA_HOSTNAME}`)"
+      - "traefik.http.routers.uptime-kuma.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.uptime-kuma.tls.certresolver=stacksmith"
+      - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
+
+volumes:
+  uptime-kuma-data:
+    name: stacksmith_uptime_kuma_data
+
+networks:
+  stacksmith:
+    external: true

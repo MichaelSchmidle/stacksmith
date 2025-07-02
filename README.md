@@ -1,216 +1,153 @@
-# Stacksmith - Portainer Management Service
+# Stacksmith - Docker Infrastructure Management System
 
-Docker stack management system with Portainer for container orchestration. Provides a web-based management interface for Docker environments with optional reverse proxy and authentication integration.
+Stacksmith is a modular Docker-based infrastructure management system built around **Portainer** as the central management interface. It provides a complete self-hosted solution for managing containerized applications with enterprise-grade security, SSL automation, and flexible service composition.
 
-## Service Overview
+## Core Services
 
-- **Image**: `portainer/portainer-ce:latest`
-- **Purpose**: Docker container management and orchestration
-- **Port**: 9000 (Web interface via Traefik)
-- **Network**: Traefik network for reverse proxy integration
-- **Authentication**: JumpCloud OAuth (post-deployment configuration)
+- **Portainer** (`docker-compose.yml`) - Docker management web interface
+- **Traefik** (`traefik/`) - Reverse proxy with automatic HTTPS
+
+## Quick Start
+
+### Prerequisites
+
+```bash
+# Create the external network (required for all services)
+docker network create stacksmith
+```
+
+### Basic Setup (Portainer + Traefik)
+
+1. **Configure Environment**:
+```bash
+cp .env.example .env
+cp traefik/.env.example traefik/.env
+# Edit both .env files with your hostnames and settings
+```
+
+2. **Deploy Core Infrastructure**:
+```bash
+docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
+```
+
+3. **Access Portainer**: Navigate to your configured hostname (e.g., `https://mgmt.example.com`)
 
 ## Architecture
 
-Stacksmith provides a flexible Docker stack management system with decoupled service deployment:
+### Core Philosophy
+- **Modular Design**: Each service is independently deployable and composable
+- **Security-First**: Integrated with Tailscale VPN and enterprise OAuth
+- **Flexible Deployment**: Services can be deployed where operationally optimal
+- **Self-Hosted Focus**: Complete infrastructure stack without external dependencies
 
-- **Management Environment**: Runs Portainer (this service)
-- **Reverse Proxy**: Traefik with automatic HTTPS
-- **Authentication**: JumpCloud OAuth integration
-- **DNS Services**: Pi-hole for ad-blocking
-- **Flexible Deployment**: Services deployed where operationally optimal
+### Service Composition
 
-## Dependencies
+Deploy additional services by combining Docker Compose files:
 
-**Optional Services**:
-- **Traefik**: Provides reverse proxy and HTTPS termination
-- **JumpCloud Auth**: Provides external authentication (configured via web UI)
+```bash
+# Add any service to the core infrastructure
+docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f servicename/docker-compose.yml up -d
 
-**External Dependencies**:
-- **Docker**: Container runtime
-- **Docker Compose**: Container orchestration
+# Deploy multiple services together
+docker compose -f traefik/docker-compose.yml -f service1/docker-compose.yml -f service2/docker-compose.yml up -d
+```
 
 ## Configuration
 
-### Environment Variables
+### Environment Structure
+- **Main Environment** (`/.env.example`): Core infrastructure settings
+- **Service-specific** (`/service/.env.example`): Individual service configuration
 
-Copy and configure the environment file:
+### Core Environment Variables
 ```bash
-cp .env.example .env
+# Core Infrastructure
+PORTAINER_HOSTNAME=mgmt.example.com
+TRAEFIK_HOSTNAME=prxy.example.com
+TRAEFIK_TAILSCALE_IP=100.64.0.1
+TRAEFIK_SECONDARY_IP=127.0.0.1
+
+# SSL Configuration
+ACME_EMAIL=your-email@example.com
+CLOUDFLARE_DNS_API_TOKEN=your-cloudflare-api-token
 ```
 
-**Required Variables**:
-- `PORTAINER_HOSTNAME`: Hostname for Portainer web interface (e.g., `mgmt.example.com`)
+## Available Services
 
-**Optional Variables**:
-- `LOG_LEVEL`: Container logging level (default: `DEBUG` for OAuth troubleshooting)
+Each service is in its own directory with complete documentation:
 
-### Docker Socket Access
+- **Pi-hole** (`pihole/`) - DNS server with ad-blocking
+- **Media Stack** (`arr/`) - Complete media automation suite
+- **n8n** (`n8n/`) - Workflow automation platform
+- **Matomo** (`matomo/`) - Privacy-focused web analytics
+- **Uptime Kuma** (`uptimekuma/`) - Uptime monitoring
+- **Home Assistant** (`homeassistant/`) - Home automation platform
 
-Portainer requires access to the Docker socket for container management:
-- **Socket Mount**: `/var/run/docker.sock:/var/run/docker.sock`
-- **Security**: Read-write access required for container management
-- **Permissions**: Ensure Docker socket is accessible
+Each service includes:
+- `docker-compose.yml` - Service configuration
+- `.env.example` - Environment template
+- `README.md` - Complete service documentation
 
-## Deployment
+## Network Architecture
 
-### Standalone Deployment (No Reverse Proxy)
-```bash
-# Configure environment
-cp .env.example .env
-# Edit .env with your settings
+### Tailscale Integration
+- **Primary Access**: Services bound to Tailscale IP (100.64.0.1)
+- **Secure Overlay**: All services accessible via Tailscale VPN
+- **Dual Entrypoints**: Primary (Tailscale) and secondary interfaces
 
-# Deploy Portainer only
-docker compose up -d
+### SSL/TLS Management
+- **Let's Encrypt**: Automatic certificate generation
+- **Cloudflare DNS Challenge**: Wildcard certificate support
+- **Strong TLS**: Custom security configuration
 
-# Access via: http://localhost:9000
-```
+## Authentication
 
-### With Traefik Reverse Proxy
-```bash
-# Configure environment
-cp .env.example .env
-cp traefik/.env.example traefik/.env
-# Edit .env files with your settings
-
-# Create external network
-docker network create stacksmith
-
-# Deploy Portainer with Traefik
-docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
-
-# Access via: https://mgmt.example.com
-```
-
-### With Full Authentication Stack
-```bash
-# Configure environment
-cp .env.example .env
-cp traefik/.env.example traefik/.env
-cp jumpcloud/.env.example jumpcloud/.env
-# Edit .env files with your settings
-
-# Create external network
-docker network create stacksmith
-
-# Deploy complete management stack
-docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f jumpcloud/docker-compose.yml up -d
-```
-
-### Common Deployment Scenarios
-
-**Home Lab Setup**:
-```bash
-# Create network and deploy management + reverse proxy
-docker network create stacksmith
-docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
-```
-
-**Enterprise Setup**:
-```bash
-# Create network and deploy full stack with authentication
-docker network create stacksmith
-docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f jumpcloud/docker-compose.yml up -d
-```
-
-**Multi-Environment Architecture**:
-- **Management Environment**: `docker-compose.yml + traefik/docker-compose.yml`
-- **Auth Environment**: `traefik/docker-compose.yml + jumpcloud/docker-compose.yml` (VPS)
-- **Agent Environments**: `traefik/docker-compose.yml` (points to remote auth)
-
-## Accessing Services
-
-### Portainer Web Interface
-- **URL**: `https://mgmt.example.com` (or configured hostname)
-- **Initial Setup**: Create admin user on first access
-- **Authentication**: Local admin + optional OAuth integration
-
-### Initial Setup
-
-1. **Access Portainer**: Navigate to your configured hostname
-2. **Create Admin User**: Set username and password
-3. **Connect Docker Environment**: Select local Docker socket
-4. **Configure OAuth** (optional): See OAuth setup guide
-
-## OAuth Configuration
-
-Portainer OAuth must be configured through the web interface after deployment. See `PORTAINER_OAUTH_SETUP.md` for detailed JumpCloud integration instructions.
-
-### Quick OAuth Setup
-
-1. **Deploy Portainer**: Complete initial setup
-2. **Access Settings**: Navigate to Settings → Authentication → OAuth
-3. **Configure JumpCloud**:
-   - Client ID: From JumpCloud application
-   - Client Secret: From JumpCloud application
-   - Authorization URL: `https://oauth.id.jumpcloud.com/oauth2/auth`
-   - Access Token URL: `https://oauth.id.jumpcloud.com/oauth2/token`
-   - Resource URL: `https://oauth.id.jumpcloud.com/userinfo`
-   - Scopes: `openid profile email`
+### JumpCloud OAuth Integration
+Enterprise identity management for Portainer and other services. See `PORTAINER_OAUTH_SETUP.md` for configuration details.
 
 ## Service Management
 
-### Container Operations
+### Common Commands
 ```bash
-# View Portainer logs
-docker compose logs -f portainer
+# Deploy specific service
+docker compose -f servicename/docker-compose.yml up -d
 
-# Restart Portainer
-docker compose restart portainer
+# View service logs
+docker compose logs -f servicename
 
-# Update Portainer
-docker compose pull portainer
-docker compose up -d portainer
-```
+# Update service
+docker compose pull servicename
+docker compose up -d servicename
 
-### Stack Management
-```bash
-# Deploy additional services
-docker compose -f docker-compose.yml -f pihole/docker-compose.yml up -d
-
-# Scale services
-docker compose up -d --scale portainer=1
-
-# Stop all services
+# Stop services
 docker compose down
 ```
 
-### Backup and Restore
+### Backup Operations
 ```bash
-# Backup Portainer data
-docker run --rm -v portainer-data:/data -v $(pwd):/backup alpine tar czf /backup/portainer-backup.tar.gz /data
+# Backup named volume
+docker run --rm -v volumename:/data -v $(pwd):/backup alpine tar czf /backup/backup.tar.gz /data
 
-# Restore Portainer data
-docker run --rm -v portainer-data:/data -v $(pwd):/backup alpine tar xzf /backup/portainer-backup.tar.gz -C /
+# Restore named volume
+docker run --rm -v volumename:/data -v $(pwd):/backup alpine tar xzf /backup/backup.tar.gz -C /
 ```
 
-## Monitoring
+## Deployment Patterns
 
-### Portainer Health
+### Home Lab Setup
 ```bash
-# Check container status
-docker compose ps portainer
-
-# Monitor resource usage
-docker stats portainer
-
-# View container logs
-docker compose logs --tail=100 portainer
+docker network create stacksmith
+docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
 ```
 
-### System Monitoring
-- **Docker Environment**: Monitor through Portainer web interface
-- **Container Statistics**: Real-time metrics in Portainer dashboard
-- **Resource Usage**: CPU, memory, network, and storage metrics
-
-## Environment Management
-
-### Agent Deployment
-
-Deploy Portainer agents on remote Docker hosts:
-
+### Multi-Service Deployment
 ```bash
-# Remote agent deployment
+# Add multiple services to core infrastructure
+docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f pihole/docker-compose.yml -f uptimekuma/docker-compose.yml up -d
+```
+
+### Remote Agent Setup
+Deploy Portainer agents on remote Docker hosts for centralized management:
+```bash
 docker run -d \
   -p 9001:9001 \
   --name portainer_agent \
@@ -220,108 +157,46 @@ docker run -d \
   portainer/agent:latest
 ```
 
-### Environment Connection
+## Security
 
-1. **Add Environment**: Portainer UI → Environments → Add environment
-2. **Select Agent**: Choose Docker agent
-3. **Configure Connection**: Enter agent IP and port 9001
-4. **Name Environment**: Provide descriptive name
-5. **Connect**: Verify connection and start managing
+- **VPN-First Access**: Tailscale integration for secure remote access
+- **Automated Certificates**: Let's Encrypt with Cloudflare DNS challenges
+- **Network Isolation**: Services communicate through dedicated networks
+- **Enterprise Authentication**: JumpCloud OAuth integration
+- **No Default Passwords**: Secure defaults across all services
 
 ## Troubleshooting
 
-### Common Issues
-
-**Portainer Won't Start**:
+### Network Issues
 ```bash
-# Check Docker socket permissions
-ls -la /var/run/docker.sock
+# Verify external network exists
+docker network ls | grep stacksmith
 
-# Verify volume mounts
-docker inspect portainer | grep Mounts
-
-# Check container logs
-docker compose logs portainer
+# Recreate network if needed
+docker network rm stacksmith
+docker network create stacksmith
 ```
 
-**Web Interface Not Accessible**:
+### Service Access Issues
 ```bash
-# Test direct container access
-curl http://localhost:9000
-
 # Check Traefik routing
-docker compose logs traefik | grep portainer
+docker compose logs traefik | grep servicename
 
-# Verify network connectivity
-docker network inspect stacksmith | grep portainer
+# Verify DNS resolution
+nslookup your-hostname.example.com
+
+# Test container connectivity
+docker compose exec servicename ping traefik
 ```
 
-**OAuth Authentication Issues**:
-- Verify JumpCloud application configuration
-- Check redirect URI matches Portainer hostname
-- Review OAuth setup documentation
-- Enable debug logging (`LOG_LEVEL=DEBUG`)
+## Contributing
 
-### Debug Commands
+When adding new services:
+1. Create service directory with consistent naming
+2. Include `docker-compose.yml`, `.env.example`, and `README.md`
+3. Follow established patterns for Traefik integration
+4. Use `stacksmith_` container naming convention
+5. Join the `stacksmith` external network
+6. Document all configuration in service README
 
-```bash
-# Check Portainer configuration
-docker compose exec portainer cat /data/portainer.db
-
-# Test network connectivity
-docker compose exec portainer nslookup traefik
-
-# Verify Docker socket access
-docker compose exec portainer ls -la /var/run/docker.sock
-```
-
-## Security Considerations
-
-- **Docker Socket**: Provides full Docker access - secure deployment environment
-- **Admin Access**: Use strong passwords and enable OAuth when possible
-- **Network Isolation**: Deploy behind reverse proxy for HTTPS
-- **Authentication**: Configure JumpCloud OAuth for enterprise environments
-- **Access Control**: Use Portainer's built-in user management and teams
-- **Regular Updates**: Keep Portainer image updated for security patches
-
-## Advanced Configuration
-
-### Custom Themes
-```bash
-# Mount custom theme directory
-volumes:
-  - ./themes:/app/themes
-```
-
-### SSL Certificates
-```bash
-# Mount custom SSL certificates
-volumes:
-  - ./ssl:/certs
-```
-
-### Environment Variables
-```bash
-# Additional Portainer configuration
-environment:
-  - PORTAINER_ADMIN_PASSWORD_FILE=/run/secrets/portainer_password
-```
-
-## Integration with Other Services
-
-### Traefik Integration
-- **Automatic routing**: Based on hostname configuration
-- **SSL termination**: Handled by Traefik
-- **Middleware support**: Authentication, rate limiting, etc.
-
-### JumpCloud Integration
-- **OAuth authentication**: Enterprise identity management
-- **User provisioning**: Automatic user creation
-- **Group management**: Map JumpCloud groups to Portainer teams
-
-### Monitoring Integration
-- **Logs**: Aggregated through Docker logging drivers
-- **Metrics**: Exportable to monitoring systems
-- **Alerts**: Configured through Portainer webhooks
-
-This service provides the central management interface for the entire stacksmith Docker infrastructure.
+This repository represents a mature, production-ready Docker infrastructure system suitable for personal use, home labs, or small to medium business deployments.
