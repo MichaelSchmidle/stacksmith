@@ -1,0 +1,52 @@
+services:
+  matomo:
+    image: matomo:latest
+    container_name: stacksmith_matomo
+    restart: unless-stopped
+    environment:
+      - MATOMO_DATABASE_HOST=matomo-db
+      - MATOMO_DATABASE_ADAPTER=mysql
+      - MATOMO_DATABASE_TABLES_PREFIX=matomo_
+      - MATOMO_DATABASE_USERNAME=${MATOMO_DB_USER}
+      - MATOMO_DATABASE_PASSWORD=${MATOMO_DB_PASSWORD}
+      - MATOMO_DATABASE_DBNAME=${MATOMO_DB_NAME}
+    volumes:
+      - matomo-data:/var/www/html
+    networks:
+      - stacksmith
+      - matomo-internal
+    depends_on:
+      - matomo-db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.matomo.rule=Host(`${MATOMO_HOSTNAME}`)"
+      - "traefik.http.routers.matomo.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.matomo.tls.certresolver=stacksmith"
+      - "traefik.http.services.matomo.loadbalancer.server.port=80"
+
+  matomo-db:
+    image: mariadb:latest
+    container_name: stacksmith_matomo_db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MATOMO_DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MATOMO_DB_NAME}
+      - MYSQL_USER=${MATOMO_DB_USER}
+      - MYSQL_PASSWORD=${MATOMO_DB_PASSWORD}
+    volumes:
+      - matomo-db-data:/var/lib/mysql
+    networks:
+      - matomo-internal
+    command: --max-allowed-packet=64MB
+
+volumes:
+  matomo-data:
+    name: stacksmith_matomo_data
+  matomo-db-data:
+    name: stacksmith_matomo_db_data
+
+networks:
+  stacksmith:
+    external: true
+  matomo-internal:
+    driver: bridge
