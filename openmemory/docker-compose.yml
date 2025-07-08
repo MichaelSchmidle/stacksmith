@@ -10,11 +10,8 @@ services:
       - openmemory-qdrant-data:/qdrant/storage
     networks:
       - stacksmith
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    # Health check removed due to curl/wget not being available in Qdrant image
+    # Container logs show service is ready when "Qdrant HTTP listening on 6333" appears
 
   openmemory-postgres:
     image: postgres:15-alpine
@@ -48,10 +45,8 @@ services:
     ports:
       - "8765:8765"
     depends_on:
-      openmemory-qdrant:
-        condition: service_healthy
-      openmemory-postgres:
-        condition: service_healthy
+      - openmemory-qdrant
+      - openmemory-postgres
     networks:
       - stacksmith
     labels:
