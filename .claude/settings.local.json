@@ -3,7 +3,9 @@
     "allow": [
       "WebFetch(domain:docs.linuxserver.io)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(mkdir:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

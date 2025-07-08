@@ -16,6 +16,7 @@ services:
       - "traefik.http.routers.portainer.entrypoints=websecure-tailscale"
       - "traefik.http.routers.portainer.tls.certresolver=stacksmith"
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+      - "traefik.http.routers.portainer.middlewares=secure-headers@file"
 
 networks:
   stacksmith:

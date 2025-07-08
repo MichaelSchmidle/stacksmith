@@ -48,6 +48,7 @@ services:
       - "traefik.http.routers.service.entrypoints=websecure-tailscale"
       - "traefik.http.routers.service.tls.certresolver=stacksmith"
       - "traefik.http.services.service.loadbalancer.server.port=PORT"
+      - "traefik.http.routers.service.middlewares=secure-headers@file"
 ```
 
 ### Key Patterns

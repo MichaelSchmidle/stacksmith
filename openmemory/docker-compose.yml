@@ -55,6 +55,7 @@ services:
       - "traefik.http.routers.openmemory.entrypoints=websecure-tailscale"
       - "traefik.http.routers.openmemory.tls.certresolver=stacksmith"
       - "traefik.http.services.openmemory.loadbalancer.server.port=8765"
+      - "traefik.http.routers.openmemory.middlewares=secure-headers@file"
     # Health check removed - curl may not be available in the image
     # FastAPI server logs show when ready: "Uvicorn running on http://0.0.0.0:8765"
 

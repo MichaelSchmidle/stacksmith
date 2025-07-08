@@ -19,6 +19,7 @@ services:
       - "traefik.http.routers.sonarr.entrypoints=websecure-tailscale"
       - "traefik.http.routers.sonarr.tls.certresolver=stacksmith"
       - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      - "traefik.http.routers.sonarr.middlewares=secure-headers@file"
 
   radarr:
     image: lscr.io/linuxserver/radarr:latest
@@ -40,6 +41,7 @@ services:
       - "traefik.http.routers.radarr.entrypoints=websecure-tailscale"
       - "traefik.http.routers.radarr.tls.certresolver=stacksmith"
       - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+      - "traefik.http.routers.radarr.middlewares=secure-headers@file"
 
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
@@ -59,6 +61,7 @@ services:
       - "traefik.http.routers.prowlarr.entrypoints=websecure-tailscale"
       - "traefik.http.routers.prowlarr.tls.certresolver=stacksmith"
       - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+      - "traefik.http.routers.prowlarr.middlewares=secure-headers@file"
 
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
@@ -87,6 +90,7 @@ services:
       - "traefik.http.routers.qbittorrent.entrypoints=websecure-tailscale"
       - "traefik.http.routers.qbittorrent.tls.certresolver=stacksmith"
       - "traefik.http.services.qbittorrent.loadbalancer.server.port=8080"
+      - "traefik.http.routers.qbittorrent.middlewares=secure-headers@file"
 
   recyclarr:
     image: ghcr.io/recyclarr/recyclarr:latest

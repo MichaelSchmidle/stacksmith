@@ -53,6 +53,7 @@ services:
       - "traefik.http.routers.homeassistant.entrypoints=websecure-tailscale"
       - "traefik.http.routers.homeassistant.tls.certresolver=stacksmith"
       - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
+      - "traefik.http.routers.homeassistant.middlewares=secure-headers@file"
 
 networks:
   stacksmith:

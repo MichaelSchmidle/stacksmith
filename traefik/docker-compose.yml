@@ -41,6 +41,7 @@ services:
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure-tailscale"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=stacksmith"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.routers.traefik-dashboard.middlewares=secure-headers@file"
 networks:
   stacksmith:
     name: stacksmith
