@@ -36,10 +36,7 @@ services:
       retries: 3
 
   openmemory-api:
-    build:
-      context: https://github.com/mem0ai/mem0.git#main
-      dockerfile: openmemory/api/Dockerfile
-    image: stacksmith_openmemory_api:latest
+    image: skpassegna/openmemory-mcp:latest
     container_name: stacksmith_openmemory_api
     restart: unless-stopped
     environment:
@@ -57,34 +54,18 @@ services:
         condition: service_healthy
     networks:
       - stacksmith
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  openmemory-ui:
-    build:
-      context: https://github.com/mem0ai/mem0.git#main
-      dockerfile: openmemory/ui/Dockerfile
-    image: stacksmith_openmemory_ui:latest
-    container_name: stacksmith_openmemory_ui
-    restart: unless-stopped
-    environment:
-      - REACT_APP_API_URL=http://openmemory-api:8765
-      - REACT_APP_MCP_SERVER_URL=http://openmemory-api:8765
-    depends_on:
-      openmemory-api:
-        condition: service_healthy
-    networks:
-      - stacksmith
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.openmemory.rule=Host(`${OPENMEMORY_HOSTNAME}`)"
       - "traefik.http.routers.openmemory.entrypoints=websecure-tailscale"
       - "traefik.http.routers.openmemory.tls.certresolver=stacksmith"
-      - "traefik.http.services.openmemory.loadbalancer.server.port=3000"
+      - "traefik.http.services.openmemory.loadbalancer.server.port=8765"
       - "traefik.http.routers.openmemory.middlewares=secure-headers@file"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   openmemory-qdrant-data:

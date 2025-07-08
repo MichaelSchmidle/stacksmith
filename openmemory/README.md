@@ -40,18 +40,18 @@ OpenMemory MCP consists of:
 
 3. **Deploy OpenMemory**:
    ```bash
-   # Deploy with Traefik (builds from source - may take several minutes)
-   docker compose -f ../traefik/docker-compose.yml -f docker-compose.yml up -d --build
+   # Deploy with Traefik (uses pre-built images)
+   docker compose -f ../traefik/docker-compose.yml -f docker-compose.yml up -d
    
    # Or deploy standalone (without external access)
-   docker compose up -d --build
+   docker compose up -d
    ```
    
-   **Note**: The first deployment builds the OpenMemory API and UI from source, which may take 5-10 minutes depending on your system.
+   **Note**: This deployment uses pre-built Docker images for faster startup.
 
 4. **Access the Service**:
-   - **Web UI**: https://mem.yourdomain.com (via Tailscale)
-   - **API Documentation**: http://localhost:8765/docs (local access)
+   - **Web Interface**: https://mem.yourdomain.com (via Tailscale)
+   - **API Documentation**: https://mem.yourdomain.com/docs (via Tailscale)
    - **MCP Server**: http://localhost:8765 (for MCP client configuration)
 
 ## Configuration
@@ -136,10 +136,9 @@ Configure your MCP client to connect to:
 
 ### Container Structure
 ```
-stacksmith_openmemory_ui        # React frontend (port 3000)
-├── stacksmith_openmemory_api   # FastAPI backend (port 8765)
-├── stacksmith_openmemory_qdrant # Vector database (port 6333)
-└── stacksmith_openmemory_postgres # PostgreSQL (port 5432)
+stacksmith_openmemory_api       # OpenMemory MCP server (port 8765)
+├── stacksmith_openmemory_qdrant # Qdrant vector database (port 6333)
+└── stacksmith_openmemory_postgres # PostgreSQL database (port 5432)
 ```
 
 ### Network Configuration
@@ -173,10 +172,10 @@ stacksmith_openmemory_ui        # React frontend (port 3000)
 
 ### Updates
 ```bash
-# Rebuild from latest source
-docker compose build --no-cache
+# Pull latest images
+docker compose pull
 
-# Restart services with new builds
+# Restart services with updated images
 docker compose up -d
 ```
 
