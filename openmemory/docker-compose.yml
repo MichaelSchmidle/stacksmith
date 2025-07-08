@@ -1,0 +1,91 @@
+services:
+  openmemory-qdrant:
+    image: qdrant/qdrant:latest
+    container_name: stacksmith_openmemory_qdrant
+    restart: unless-stopped
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    volumes:
+      - openmemory-qdrant-data:/qdrant/storage
+    networks:
+      - stacksmith
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  openmemory-postgres:
+    image: postgres:15-alpine
+    container_name: stacksmith_openmemory_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-openmemory}
+      - POSTGRES_USER=${POSTGRES_USER:-openmemory}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - openmemory-postgres-data:/var/lib/postgresql/data
+    networks:
+      - stacksmith
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openmemory} -d ${POSTGRES_DB:-openmemory}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  openmemory-api:
+    image: mem0ai/openmemory:latest
+    container_name: stacksmith_openmemory_api
+    restart: unless-stopped
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - QDRANT_URL=http://openmemory-qdrant:6333
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-openmemory}:${POSTGRES_PASSWORD}@openmemory-postgres:5432/${POSTGRES_DB:-openmemory}
+      - MCP_SERVER_PORT=8765
+      - API_PORT=8765
+    ports:
+      - "8765:8765"
+    depends_on:
+      openmemory-qdrant:
+        condition: service_healthy
+      openmemory-postgres:
+        condition: service_healthy
+    networks:
+      - stacksmith
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  openmemory-ui:
+    image: mem0ai/openmemory-ui:latest
+    container_name: stacksmith_openmemory_ui
+    restart: unless-stopped
+    environment:
+      - REACT_APP_API_URL=http://openmemory-api:8765
+      - REACT_APP_MCP_SERVER_URL=http://openmemory-api:8765
+    depends_on:
+      openmemory-api:
+        condition: service_healthy
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openmemory.rule=Host(`${OPENMEMORY_HOSTNAME}`)"
+      - "traefik.http.routers.openmemory.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.openmemory.tls.certresolver=stacksmith"
+      - "traefik.http.services.openmemory.loadbalancer.server.port=3000"
+      - "traefik.http.routers.openmemory.middlewares=secure-headers@file"
+
+volumes:
+  openmemory-qdrant-data:
+    driver: local
+  openmemory-postgres-data:
+    driver: local
+
+networks:
+  stacksmith:
+    external: true

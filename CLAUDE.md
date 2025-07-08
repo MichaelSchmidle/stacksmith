@@ -28,6 +28,7 @@ Additional services are available in their respective directories, each with com
 All services follow a consistent pattern:
 
 ```yaml
+# NOTE: The 'version' field has been deprecated and should not be used
 services:
   service-name:
     image: service/image:latest
