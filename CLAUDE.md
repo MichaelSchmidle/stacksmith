@@ -103,6 +103,10 @@ TRAEFIK_SECONDARY_IP=127.0.0.1
 # SSL Configuration
 ACME_EMAIL=your-email@example.com
 CLOUDFLARE_DNS_API_TOKEN=your-cloudflare-api-token
+
+# Timezone Configuration
+# IMPORTANT: Always use Europe/Zurich as the default timezone in .env.example files
+TZ=Europe/Zurich
 ```
 
 ## Deployment Patterns
