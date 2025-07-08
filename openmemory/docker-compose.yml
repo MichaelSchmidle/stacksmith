@@ -33,7 +33,7 @@ services:
       retries: 3
 
   openmemory-api:
-    image: skpassegna/openmemory-mcp:latest
+    image: ghcr.io/michaelschmidle/stacksmith-openmemory-api:latest
     container_name: stacksmith_openmemory_api
     restart: unless-stopped
     environment:
@@ -51,13 +51,32 @@ services:
       - stacksmith
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.openmemory.rule=Host(`${OPENMEMORY_HOSTNAME}`)"
-      - "traefik.http.routers.openmemory.entrypoints=websecure-tailscale"
-      - "traefik.http.routers.openmemory.tls.certresolver=stacksmith"
-      - "traefik.http.services.openmemory.loadbalancer.server.port=8765"
-      - "traefik.http.routers.openmemory.middlewares=secure-headers@file"
+      - "traefik.http.routers.openmemory-api.rule=Host(`${OPENMEMORY_HOSTNAME}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.openmemory-api.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.openmemory-api.tls.certresolver=stacksmith"
+      - "traefik.http.services.openmemory-api.loadbalancer.server.port=8765"
+      - "traefik.http.routers.openmemory-api.middlewares=secure-headers@file"
     # Health check removed - curl may not be available in the image
     # FastAPI server logs show when ready: "Uvicorn running on http://0.0.0.0:8765"
+
+  openmemory-ui:
+    image: ghcr.io/michaelschmidle/stacksmith-openmemory-ui:latest
+    container_name: stacksmith_openmemory_ui
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=https://${OPENMEMORY_HOSTNAME}/api
+      - NEXT_PUBLIC_USER_ID=${USER:-stacksmith}
+    depends_on:
+      - openmemory-api
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openmemory-ui.rule=Host(`${OPENMEMORY_HOSTNAME}`)"
+      - "traefik.http.routers.openmemory-ui.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.openmemory-ui.tls.certresolver=stacksmith"
+      - "traefik.http.services.openmemory-ui.loadbalancer.server.port=3000"
+      - "traefik.http.routers.openmemory-ui.middlewares=secure-headers@file"
 
 volumes:
   openmemory-qdrant-data:

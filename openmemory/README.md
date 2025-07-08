@@ -10,6 +10,14 @@ OpenMemory MCP consists of:
 - **Qdrant vector database** for semantic memory storage
 - **PostgreSQL database** for relational data storage
 
+## Custom Images
+
+This deployment uses custom-built images from the official mem0ai/mem0 repository:
+- **API**: `ghcr.io/michaelschmidle/stacksmith-openmemory-api:latest`
+- **UI**: `ghcr.io/michaelschmidle/stacksmith-openmemory-ui:latest`
+
+Images are automatically built weekly via GitHub Actions from the upstream repository.
+
 ## Features
 
 - **Privacy-First**: All data stored locally in your infrastructure
@@ -50,8 +58,8 @@ OpenMemory MCP consists of:
    **Note**: This deployment uses pre-built Docker images for faster startup.
 
 4. **Access the Service**:
-   - **Web Interface**: https://mem.yourdomain.com (via Tailscale)
-   - **API Documentation**: https://mem.yourdomain.com/docs (via Tailscale)
+   - **Web Interface**: https://mem.yourdomain.com (via Tailscale) - Memory management dashboard
+   - **API Documentation**: https://mem.yourdomain.com/api/docs (via Tailscale)
    - **MCP Server**: http://localhost:8765 (for MCP client configuration)
 
 ## Configuration
