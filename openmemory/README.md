@@ -40,12 +40,14 @@ OpenMemory MCP consists of:
 
 3. **Deploy OpenMemory**:
    ```bash
-   # Deploy with Traefik
-   docker compose -f ../traefik/docker-compose.yml -f docker-compose.yml up -d
+   # Deploy with Traefik (builds from source - may take several minutes)
+   docker compose -f ../traefik/docker-compose.yml -f docker-compose.yml up -d --build
    
    # Or deploy standalone (without external access)
-   docker compose up -d
+   docker compose up -d --build
    ```
+   
+   **Note**: The first deployment builds the OpenMemory API and UI from source, which may take 5-10 minutes depending on your system.
 
 4. **Access the Service**:
    - **Web UI**: https://mem.yourdomain.com (via Tailscale)
@@ -171,10 +173,10 @@ stacksmith_openmemory_ui        # React frontend (port 3000)
 
 ### Updates
 ```bash
-# Pull latest images
-docker compose pull
+# Rebuild from latest source
+docker compose build --no-cache
 
-# Restart services
+# Restart services with new builds
 docker compose up -d
 ```
 

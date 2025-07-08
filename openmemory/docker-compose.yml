@@ -36,7 +36,10 @@ services:
       retries: 3
 
   openmemory-api:
-    image: mem0ai/openmemory:latest
+    build:
+      context: https://github.com/mem0ai/mem0.git#main
+      dockerfile: openmemory/api/Dockerfile
+    image: stacksmith_openmemory_api:latest
     container_name: stacksmith_openmemory_api
     restart: unless-stopped
     environment:
@@ -61,7 +64,10 @@ services:
       retries: 3
 
   openmemory-ui:
-    image: mem0ai/openmemory-ui:latest
+    build:
+      context: https://github.com/mem0ai/mem0.git#main
+      dockerfile: openmemory/ui/Dockerfile
+    image: stacksmith_openmemory_ui:latest
     container_name: stacksmith_openmemory_ui
     restart: unless-stopped
     environment:
