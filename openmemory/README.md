@@ -29,14 +29,13 @@ docker compose -f traefik/docker-compose.yml -f openmemory/docker-compose.yml up
 
 ## Access
 - **Web Interface**: https://mem.yourdomain.com (via Tailscale)
-- **API Documentation**: https://api.mem.yourdomain.com/docs
-- **MCP Server**: https://api.mem.yourdomain.com (for MCP clients)
+- **API Documentation**: https://mem.yourdomain.com/api/docs
+- **MCP Server**: https://mem.yourdomain.com/mcp (for MCP clients)
 
 ## Configuration
 
 **Required**:
-- `OPENMEMORY_HOSTNAME`: Public hostname for UI
-- `OPENMEMORY_API_HOSTNAME`: Public hostname for API (e.g., api.mem.yourdomain.com)
+- `OPENMEMORY_HOSTNAME`: Public hostname
 - `OPENAI_API_KEY`: OpenAI API key for embeddings
 - `POSTGRES_PASSWORD`: Secure database password
 
@@ -47,7 +46,7 @@ docker compose -f traefik/docker-compose.yml -f openmemory/docker-compose.yml up
 
 ### Claude Desktop (via OpenMemory Install)
 ```bash
-npx @openmemory/install local https://api.mem.yourdomain.com/mcp/claude/sse/your-user-id --client claude
+npx @openmemory/install local https://mem.yourdomain.com/mcp/claude/sse/your-user-id --client claude
 ```
 
 ### Manual MCP Configuration
@@ -56,7 +55,7 @@ npx @openmemory/install local https://api.mem.yourdomain.com/mcp/claude/sse/your
   "mcpServers": {
     "openmemory": {
       "command": "npx",
-      "args": ["-y", "supergateway", "--sse", "https://api.mem.yourdomain.com/mcp/claude/sse/your-user-id"]
+      "args": ["-y", "supergateway", "--sse", "https://mem.yourdomain.com/mcp/claude/sse/your-user-id"]
     }
   }
 }
