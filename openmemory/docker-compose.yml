@@ -55,7 +55,8 @@ services:
       - "traefik.http.routers.openmemory-api.entrypoints=websecure-tailscale"
       - "traefik.http.routers.openmemory-api.tls.certresolver=stacksmith"
       - "traefik.http.services.openmemory-api.loadbalancer.server.port=8765"
-      - "traefik.http.routers.openmemory-api.middlewares=secure-headers@docker"
+      - "traefik.http.middlewares.openmemory-api-stripprefix.stripprefix.prefixes=/api"
+      - "traefik.http.routers.openmemory-api.middlewares=openmemory-api-stripprefix,secure-headers@docker"
     # Health check removed - curl may not be available in the image
     # FastAPI server logs show when ready: "Uvicorn running on http://0.0.0.0:8765"
 
