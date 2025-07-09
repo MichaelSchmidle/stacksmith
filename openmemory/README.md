@@ -67,4 +67,4 @@ npx @openmemory/install local https://mem.yourdomain.com/mcp/claude/sse/your-use
 
 **API Endpoints**: `/v1/memories` (GET/POST/DELETE), `/v1/memories/search`, `/v1/apps`, `/v1/config`
 
-Tailscale VPN access. Uses custom-built images from mem0ai/mem0 repository. Data persisted in Docker volumes. Local storage only except for OpenAI API.
+Tailscale VPN access. Uses custom-built images from mem0ai/mem0 repository (latest stable release). Data persisted in Docker volumes. Local storage only except for OpenAI API.
