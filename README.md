@@ -189,6 +189,38 @@ nslookup your-hostname.example.com
 docker compose exec servicename ping traefik
 ```
 
+## Local Development and Testing
+
+Test changes locally before committing to avoid production deployment issues.
+
+### Prerequisites
+- Docker and Docker Compose
+- Wildcard DNS: `*.dev.example.com` → `127.0.0.1`
+- Cloudflare DNS API token
+
+### Setup
+```bash
+# Create network and copy environment files
+docker network create stacksmith
+cp .env.example .env
+cp servicename/.env.example servicename/.env
+
+# Update .env files:
+# - Set TRAEFIK_TAILSCALE_IP=127.0.0.1
+# - Use local domains (e.g., mgmt.dev.example.com)
+
+# Deploy and test
+docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
+docker compose -f traefik/docker-compose.yml -f servicename/docker-compose.yml up -d
+curl -k https://mgmt.dev.example.com
+```
+
+### For Claude Code Users
+Use the `#` memory shortcut to store your test domain:
+```
+# Stacksmith local testing: Use *.dev.example.com for local development domains in this repo
+```
+
 ## Contributing
 
 When adding new services:
@@ -198,5 +230,6 @@ When adding new services:
 4. Use `stacksmith_` container naming convention
 5. Join the `stacksmith` external network
 6. Document all configuration in service README
+7. **Test locally** before committing changes
 
 This repository represents a mature, production-ready Docker infrastructure system suitable for personal use, home labs, or small to medium business deployments.

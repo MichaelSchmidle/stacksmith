@@ -266,8 +266,24 @@ docker run --rm -v volumename:/data -v $(pwd):/backup alpine tar xzf /backup/bac
 
 This repository represents a mature, production-ready Docker infrastructure system suitable for personal use, home labs, or small to medium business deployments.
 
+## Local Development and Testing
+
+### Local Testing Workflow
+For testing changes before committing, replicate the production environment locally:
+
+1. **Setup**: Ensure `*.dev.example.com` resolves to `127.0.0.1` via Cloudflare DNS
+2. **Environment**: Set `TRAEFIK_TAILSCALE_IP=127.0.0.1` in local `.env` files
+3. **Deploy**: Use standard Docker Compose commands with local domains
+4. **Test**: Verify service accessibility and SSL certificate generation
+
+### When Testing Changes
+- Prompt user for their actual test domain (don't read .env files)
+- Use the domain from user's `~/.claude/CLAUDE.md` memory if available
+- Test complete deployment workflow including Traefik routing
+
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
+NEVER ever read `.env` files as contained secrets would leak into your logs/telemetry at Anthropic.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
