@@ -42,8 +42,6 @@ services:
       - POSTGRES_URL=postgresql://${POSTGRES_USER:-openmemory}:${POSTGRES_PASSWORD}@openmemory-postgres:5432/${POSTGRES_DB:-openmemory}
       - MCP_SERVER_PORT=8765
       - API_PORT=8765
-    ports:
-      - "8765:8765"
     depends_on:
       - openmemory-qdrant
       - openmemory-postgres

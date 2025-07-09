@@ -3,8 +3,8 @@
 Privacy-first AI memory layer for MCP clients. Provides persistent memory across Claude Desktop, Cursor, Windsurf, and other MCP clients.
 
 ## Components
-- **FastAPI backend** (port 8765) with MCP server
-- **React frontend** (port 3000) for memory management
+- **FastAPI backend** with MCP server (accessible via Traefik)
+- **React frontend** for memory management (accessible via Traefik)
 - **Qdrant vector database** for semantic memory
 - **PostgreSQL database** for relational data
 
