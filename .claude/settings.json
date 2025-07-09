@@ -3,6 +3,7 @@
     "PreToolUse": [
       {
         "matcher": "Bash",
+        "pattern": "^git\\s+commit",
         "hooks": [
           {
             "type": "command",
