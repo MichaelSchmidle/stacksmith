@@ -5,7 +5,7 @@ Complete media automation stack with Sonarr, Radarr, Prowlarr, qBittorrent, and 
 ## Prerequisites
 - Traefik reverse proxy
 - Media storage (local or NFS)
-- JumpCloud OAuth (optional)
+- Tailscale VPN access
 
 ## Configuration
 
@@ -36,4 +36,4 @@ docker compose -f traefik/docker-compose.yml -f arr/docker-compose.yml up -d
 5. **Recyclarr**: Auto-syncs TRaSH guide quality profiles
 6. **qbit_manage**: Auto-cleanup at 1.0 ratio
 
-All services protected by JumpCloud OAuth. Configuration persisted in Docker volumes.
+All services protected by Tailscale VPN access. Configuration persisted in Docker volumes.

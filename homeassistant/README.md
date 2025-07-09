@@ -5,7 +5,7 @@ Smart home automation platform with web-based device integration.
 ## Prerequisites
 - Traefik reverse proxy
 - IoT devices (Hue Bridge, WiFi devices, etc.)
-- JumpCloud OAuth (optional)
+- Tailscale VPN access
 
 ## Configuration
 
@@ -37,4 +37,4 @@ docker compose -f traefik/docker-compose.yml -f homeassistant/docker-compose.yml
 - **Voice Assistants**: Google, Alexa
 - **Weather, notifications, cloud storage**
 
-Built-in authentication with optional JumpCloud OAuth. SSL via Traefik. Configuration persisted in Docker volumes.
+Built-in authentication with Tailscale VPN access. SSL via Traefik. Configuration persisted in Docker volumes.

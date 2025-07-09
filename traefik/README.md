@@ -6,7 +6,7 @@ Reverse proxy with automatic HTTPS via Let's Encrypt and Cloudflare DNS challeng
 - **Automatic SSL**: Let's Encrypt certificates with DNS challenge
 - **Service Discovery**: Automatic routing based on Docker labels
 - **Load Balancing**: Built-in load balancing
-- **Authentication**: JumpCloud OAuth middleware (optional)
+- **Tailscale Integration**: Primary access via Tailscale VPN
 
 ## Configuration
 
@@ -39,7 +39,7 @@ labels:
   - "traefik.http.routers.service-name.tls.certresolver=stacksmith"
 ```
 
-**Optional authentication**: Add `jumpcloud-auth@docker` middleware.
+**Tailscale entrypoint**: Services use `websecure-tailscale` for VPN access.
 
 ## Dashboard
 

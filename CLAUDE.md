@@ -135,9 +135,9 @@ docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f service1/d
 ## Security Model
 
 ### Authentication Architecture
-- **JumpCloud OAuth**: Enterprise identity management (configuration in `/PORTAINER_OAUTH_SETUP.md`)
+- **JumpCloud OAuth**: Optional for Portainer only (configuration in `/PORTAINER_OAUTH_SETUP.md`)
+- **Tailscale VPN**: Primary access method for all services
 - **Service-level Authentication**: Individual service security
-- **Traefik Middleware**: Centralized authentication enforcement
 
 ### Network Security
 - **Tailscale VPN**: Primary access method

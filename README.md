@@ -101,8 +101,8 @@ Each service includes:
 
 ## Authentication
 
-### JumpCloud OAuth Integration
-Enterprise identity management for Portainer and other services. See `PORTAINER_OAUTH_SETUP.md` for configuration details.
+### Tailscale VPN Access
+Primary access method for all services via Tailscale VPN. Optional JumpCloud OAuth for Portainer only (see `PORTAINER_OAUTH_SETUP.md`).
 
 ## Service Management
 

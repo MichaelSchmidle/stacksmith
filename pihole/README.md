@@ -9,7 +9,7 @@ Clients → Gateway (DHCP + Local DNS) → Pi-hole (Ad Blocking) → Internet DN
 
 ## Prerequisites
 - Traefik reverse proxy
-- JumpCloud OAuth (optional)
+- Tailscale VPN access
 - Gateway configured to use Pi-hole as upstream
 
 ## Configuration
@@ -39,7 +39,7 @@ docker compose -f traefik/docker-compose.yml -f pihole/docker-compose.yml up -d
 
 - **Web Interface**: Query logs, statistics, blocklist management
 - **DNS Service**: Port 53 for gateway access
-- **Protected by JumpCloud OAuth** (optional)
+- **Protected by Tailscale VPN access**
 
 ## Testing
 
@@ -51,4 +51,4 @@ nslookup google.com [pihole-ip]
 nslookup doubleclick.net [pihole-ip]
 ```
 
-Binds to specific host IP to avoid port conflicts. Blocklists update automatically. Web interface protected by JumpCloud OAuth.
+Binds to specific host IP to avoid port conflicts. Blocklists update automatically. Web interface protected by Tailscale VPN access.

@@ -3,6 +3,12 @@
 # Pre-commit hook for Claude Code to ensure documentation maintenance and session reflection
 # This script runs before git commit commands to validate documentation changes
 
+# Check if this is a git commit command
+if [[ "$1" != *"git commit"* ]]; then
+    # Not a git commit command, exit silently
+    exit 0
+fi
+
 set -e
 
 # Colors for output
