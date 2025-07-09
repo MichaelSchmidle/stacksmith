@@ -8,8 +8,6 @@ services:
       - --api.insecure=false
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
-      - --providers.file.directory=/etc/traefik/dynamic
-      - --providers.file.watch=true
       - --entrypoints.web-tailscale.address=:80
       - --entrypoints.websecure-tailscale.address=:443
       - --entrypoints.web-secondary.address=:8080
@@ -31,7 +29,6 @@ services:
       - CLOUDFLARE_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./dynamic:/etc/traefik/dynamic:ro
       - traefik-certificates:/letsencrypt
     networks:
       - stacksmith
@@ -41,7 +38,19 @@ services:
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure-tailscale"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=stacksmith"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
-      - "traefik.http.routers.traefik-dashboard.middlewares=secure-headers@file"
+      - "traefik.http.routers.traefik-dashboard.middlewares=secure-headers@docker"
+      # Define secure-headers middleware via Docker labels
+      - "traefik.http.middlewares.secure-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.secure-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.secure-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.secure-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
+      - "traefik.http.middlewares.secure-headers.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.secure-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.secure-headers.headers.stsPreload=true"
+      - "traefik.http.middlewares.secure-headers.headers.customRequestHeaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.secure-headers.headers.customResponseHeaders.X-Robots-Tag=noindex, nofollow, nosnippet, noarchive"
+      - "traefik.http.middlewares.secure-headers.headers.customResponseHeaders.Permissions-Policy=geolocation=(), microphone=(), camera=()"
 networks:
   stacksmith:
     name: stacksmith

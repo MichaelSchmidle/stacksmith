@@ -23,7 +23,7 @@ services:
       - "traefik.http.routers.matomo.entrypoints=websecure-secondary"
       - "traefik.http.routers.matomo.tls.certresolver=stacksmith"
       - "traefik.http.services.matomo.loadbalancer.server.port=80"
-      - "traefik.http.routers.matomo.middlewares=secure-headers@file"
+      - "traefik.http.routers.matomo.middlewares=secure-headers@docker"
 
   matomo-db:
     image: mariadb:latest

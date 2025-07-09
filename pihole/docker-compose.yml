@@ -31,7 +31,7 @@ services:
       - "traefik.http.routers.pihole.entrypoints=websecure-tailscale"
       - "traefik.http.routers.pihole.tls.certresolver=stacksmith"
       - "traefik.http.services.pihole.loadbalancer.server.port=${PIHOLE_WEB_PORT:-8080}"
-      - "traefik.http.routers.pihole.middlewares=secure-headers@file"
+      - "traefik.http.routers.pihole.middlewares=secure-headers@docker"
       - "traefik.http.routers.pihole-redirect.rule=Host(`${PIHOLE_WEB_HOSTNAME}`) && Path(`/`)"
       - "traefik.http.routers.pihole-redirect.entrypoints=websecure-tailscale"
       - "traefik.http.routers.pihole-redirect.tls.certresolver=stacksmith"
