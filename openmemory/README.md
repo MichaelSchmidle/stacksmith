@@ -29,40 +29,43 @@ docker compose -f traefik/docker-compose.yml -f openmemory/docker-compose.yml up
 
 ## Access
 - **Web Interface**: https://mem.yourdomain.com (via Tailscale)
-- **API Documentation**: https://mem.yourdomain.com/api/docs
-- **MCP Server**: http://localhost:8765 (for MCP clients)
+- **API Documentation**: https://api.mem.yourdomain.com/docs
+- **MCP Server**: https://api.mem.yourdomain.com (for MCP clients)
 
 ## Configuration
 
 **Required**:
-- `OPENMEMORY_HOSTNAME`: Public hostname
+- `OPENMEMORY_HOSTNAME`: Public hostname for UI
+- `OPENMEMORY_API_HOSTNAME`: Public hostname for API (e.g., api.mem.yourdomain.com)
 - `OPENAI_API_KEY`: OpenAI API key for embeddings
 - `POSTGRES_PASSWORD`: Secure database password
 
+**Optional**:
+- `USER`: User identifier for memory storage (defaults to 'stacksmith')
+
 ## MCP Client Setup
 
-### Claude Desktop
+### Claude Desktop (via OpenMemory Install)
+```bash
+npx @openmemory/install local https://api.mem.yourdomain.com/mcp/claude/sse/your-user-id --client claude
+```
+
+### Manual MCP Configuration
 ```json
 {
   "mcpServers": {
     "openmemory": {
       "command": "npx",
-      "args": ["@openmemory/mcp-client"],
-      "env": {
-        "OPENMEMORY_API_URL": "http://localhost:8765"
-      }
+      "args": ["-y", "supergateway", "--sse", "https://api.mem.yourdomain.com/mcp/claude/sse/your-user-id"]
     }
   }
 }
 ```
 
-### Other MCP Clients
-Connect to: `http://localhost:8765`
-
 ## Memory Operations
 
 **MCP Tools**: `add_memories`, `search_memory`, `list_memories`, `delete_all_memories`
 
-**API Endpoints**: `/health`, `/api/memories` (GET/POST/DELETE), `/api/memories/search`
+**API Endpoints**: `/v1/memories` (GET/POST/DELETE), `/v1/memories/search`, `/v1/apps`, `/v1/config`
 
 Tailscale VPN access. Uses custom-built images from mem0ai/mem0 repository. Data persisted in Docker volumes. Local storage only except for OpenAI API.

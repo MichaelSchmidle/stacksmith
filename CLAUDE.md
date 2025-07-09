@@ -58,6 +58,7 @@ services:
 - **Volume management**: Named volumes for persistence, bind mounts for config
 - **User management**: Consistent PUID/PGID across LinuxServer images
 - **Hostname convention**: Ultra-short 3-4 character hostnames that abstract the function (e.g., `dns` for Pi-hole, `mgmt` for Portainer)
+- **Subdomain routing**: Prefer subdomains over complex path routing for services with multiple endpoints (e.g., `api.service.example.com` instead of `service.example.com/api`)
 
 ## Network Architecture
 

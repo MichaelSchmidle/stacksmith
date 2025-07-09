@@ -51,12 +51,11 @@ services:
       - stacksmith
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.openmemory-api.rule=Host(`${OPENMEMORY_HOSTNAME}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.openmemory-api.rule=Host(`${OPENMEMORY_API_HOSTNAME}`)"
       - "traefik.http.routers.openmemory-api.entrypoints=websecure-tailscale"
       - "traefik.http.routers.openmemory-api.tls.certresolver=stacksmith"
       - "traefik.http.services.openmemory-api.loadbalancer.server.port=8765"
-      - "traefik.http.middlewares.openmemory-api-stripprefix.stripprefix.prefixes=/api"
-      - "traefik.http.routers.openmemory-api.middlewares=openmemory-api-stripprefix,secure-headers@docker"
+      - "traefik.http.routers.openmemory-api.middlewares=secure-headers@docker"
     # Health check removed - curl may not be available in the image
     # FastAPI server logs show when ready: "Uvicorn running on http://0.0.0.0:8765"
 
@@ -65,7 +64,7 @@ services:
     container_name: stacksmith_openmemory_ui
     restart: unless-stopped
     environment:
-      - NEXT_PUBLIC_API_URL=https://${OPENMEMORY_HOSTNAME}/api
+      - NEXT_PUBLIC_API_URL=https://${OPENMEMORY_API_HOSTNAME}
       - NEXT_PUBLIC_USER_ID=${USER:-stacksmith}
     depends_on:
       - openmemory-api
