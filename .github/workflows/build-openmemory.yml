@@ -22,11 +22,18 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Get latest stable release
+        id: latest_release
+        run: |
+          LATEST_TAG=$(curl -s https://api.github.com/repos/mem0ai/mem0/releases/latest | jq -r '.tag_name')
+          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Using latest stable release: $LATEST_TAG"
+
       - name: Checkout mem0 repository
         uses: actions/checkout@v4
         with:
           repository: mem0ai/mem0
-          ref: main
+          ref: ${{ steps.latest_release.outputs.tag }}
           path: mem0
 
       - name: Set up Docker Buildx
@@ -67,11 +74,18 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Get latest stable release
+        id: latest_release
+        run: |
+          LATEST_TAG=$(curl -s https://api.github.com/repos/mem0ai/mem0/releases/latest | jq -r '.tag_name')
+          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Using latest stable release: $LATEST_TAG"
+
       - name: Checkout mem0 repository
         uses: actions/checkout@v4
         with:
           repository: mem0ai/mem0
-          ref: main
+          ref: ${{ steps.latest_release.outputs.tag }}
           path: mem0
 
       - name: Set up Docker Buildx
