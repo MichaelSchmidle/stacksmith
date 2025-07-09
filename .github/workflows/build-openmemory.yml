@@ -2,13 +2,19 @@ name: Build OpenMemory Images
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Upstream version to build (leave empty to auto-detect)'
+        required: false
+        type: string
+      force:
+        description: 'Force build even if images already exist'
+        required: false
+        type: boolean
+        default: false
   schedule:
-    # Build weekly on Sundays at 2 AM UTC
-    - cron: '0 2 * * 0'
-  push:
-    paths:
-      - '.github/workflows/build-openmemory.yml'
-      - 'openmemory/**'
+    # Check for new releases daily at 2 AM UTC
+    - cron: '0 2 * * *'
 
 env:
   REGISTRY: ghcr.io
@@ -16,24 +22,115 @@ env:
   IMAGE_UI: ghcr.io/michaelschmidle/stacksmith-openmemory-ui
 
 jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should_build: ${{ steps.check.outputs.should_build }}
+      api_exists: ${{ steps.check.outputs.api_exists }}
+      ui_exists: ${{ steps.check.outputs.ui_exists }}
+    steps:
+      - name: Get upstream version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            echo "Using manual version: $VERSION"
+          else
+            echo "Fetching latest upstream version..."
+            VERSION=$(curl -s https://api.github.com/repos/mem0ai/mem0/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+            if [ "$VERSION" = "null" ] || [ -z "$VERSION" ]; then
+              echo "Failed to fetch upstream version"
+              exit 1
+            fi
+            echo "Latest upstream version: $VERSION"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if images already exist
+        id: check
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          FORCE="${{ github.event.inputs.force }}"
+          
+          # Check if API image exists
+          API_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/v2/michaelschmidle/stacksmith-openmemory-api/manifests/$VERSION")
+          
+          # Check if UI image exists  
+          UI_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/v2/michaelschmidle/stacksmith-openmemory-ui/manifests/$VERSION")
+          
+          echo "api_exists=$([[ $API_EXISTS == "200" ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+          echo "ui_exists=$([[ $UI_EXISTS == "200" ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+          
+          # Determine if we should build
+          if [ "$FORCE" = "true" ]; then
+            echo "Force build requested"
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          elif [ "$API_EXISTS" = "200" ] && [ "$UI_EXISTS" = "200" ]; then
+            echo "Both images already exist for version $VERSION"
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          else
+            echo "Images missing for version $VERSION, will build"
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create issue on version detection failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `OpenMemory CI/CD: Failed to detect upstream version`;
+            const body = `
+            ## Issue Summary
+            The OpenMemory CI/CD pipeline failed to detect the upstream version from mem0ai/mem0.
+            
+            **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            **Trigger**: ${{ github.event_name }}
+            **Time**: ${{ github.run_id }}
+            
+            ## Possible Causes
+            - GitHub API rate limiting
+            - Network connectivity issues
+            - Changes in upstream repository structure
+            - API endpoint changes
+            
+            ## Next Steps
+            1. Check the workflow logs for specific error messages
+            2. Verify the mem0ai/mem0 repository is accessible
+            3. Consider running the workflow manually with a specific version
+            4. Check if the upstream repository has changed their release process
+            
+            @claude can you help investigate this issue?
+            
+            This issue was automatically created by the CI/CD pipeline.
+            `;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['ci/cd', 'openmemory', 'automated']
+            });
+
   build-api:
     runs-on: ubuntu-latest
+    needs: check-version
+    if: needs.check-version.outputs.should_build == 'true'
     permissions:
       contents: read
       packages: write
+      issues: write
     steps:
-      - name: Get latest stable release
-        id: latest_release
-        run: |
-          LATEST_TAG=$(curl -s https://api.github.com/repos/mem0ai/mem0/releases/latest | jq -r '.tag_name')
-          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "Using latest stable release: $LATEST_TAG"
-
       - name: Checkout mem0 repository
         uses: actions/checkout@v4
         with:
           repository: mem0ai/mem0
-          ref: ${{ steps.latest_release.outputs.tag }}
+          ref: v${{ needs.check-version.outputs.version }}
           path: mem0
 
       - name: Set up Docker Buildx
@@ -53,8 +150,7 @@ jobs:
           images: ${{ env.IMAGE_API }}
           tags: |
             type=raw,value=latest
-            type=schedule,pattern={{date 'YYYY-MM-DD'}}
-            type=sha,prefix={{branch}}-
+            type=raw,value=${{ needs.check-version.outputs.version }}
 
       - name: Build and push API image
         uses: docker/build-push-action@v5
@@ -68,24 +164,59 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Create issue on API build failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `OpenMemory CI/CD: API build failed for version ${{ needs.check-version.outputs.version }}`;
+            const body = `
+            ## Issue Summary
+            The OpenMemory API image build failed for version \`${{ needs.check-version.outputs.version }}\`.
+            
+            **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            **Version**: ${{ needs.check-version.outputs.version }}
+            **Trigger**: ${{ github.event_name }}
+            **Image**: ${{ env.IMAGE_API }}
+            
+            ## Build Details
+            - **Source**: mem0ai/mem0@v${{ needs.check-version.outputs.version }}
+            - **Context**: ./mem0/openmemory/api
+            - **Platforms**: linux/amd64,linux/arm64
+            
+            ## Next Steps
+            1. Check the workflow logs for specific error messages
+            2. Verify the upstream tag v${{ needs.check-version.outputs.version }} exists
+            3. Check if the Dockerfile or build context has issues
+            4. Consider running the build manually with debug enabled
+            
+            @claude can you help debug this build failure?
+            
+            This issue was automatically created by the CI/CD pipeline.
+            `;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['ci/cd', 'openmemory', 'build-failure', 'automated']
+            });
+
   build-ui:
     runs-on: ubuntu-latest
+    needs: check-version
+    if: needs.check-version.outputs.should_build == 'true'
     permissions:
       contents: read
       packages: write
+      issues: write
     steps:
-      - name: Get latest stable release
-        id: latest_release
-        run: |
-          LATEST_TAG=$(curl -s https://api.github.com/repos/mem0ai/mem0/releases/latest | jq -r '.tag_name')
-          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "Using latest stable release: $LATEST_TAG"
-
       - name: Checkout mem0 repository
         uses: actions/checkout@v4
         with:
           repository: mem0ai/mem0
-          ref: ${{ steps.latest_release.outputs.tag }}
+          ref: v${{ needs.check-version.outputs.version }}
           path: mem0
 
       - name: Set up Docker Buildx
@@ -105,8 +236,7 @@ jobs:
           images: ${{ env.IMAGE_UI }}
           tags: |
             type=raw,value=latest
-            type=schedule,pattern={{date 'YYYY-MM-DD'}}
-            type=sha,prefix={{branch}}-
+            type=raw,value=${{ needs.check-version.outputs.version }}
 
       - name: Build and push UI image
         uses: docker/build-push-action@v5
@@ -120,41 +250,127 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Create issue on UI build failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `OpenMemory CI/CD: UI build failed for version ${{ needs.check-version.outputs.version }}`;
+            const body = `
+            ## Issue Summary
+            The OpenMemory UI image build failed for version \`${{ needs.check-version.outputs.version }}\`.
+            
+            **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            **Version**: ${{ needs.check-version.outputs.version }}
+            **Trigger**: ${{ github.event_name }}
+            **Image**: ${{ env.IMAGE_UI }}
+            
+            ## Build Details
+            - **Source**: mem0ai/mem0@v${{ needs.check-version.outputs.version }}
+            - **Context**: ./mem0/openmemory/ui
+            - **Platforms**: linux/amd64,linux/arm64
+            
+            ## Next Steps
+            1. Check the workflow logs for specific error messages
+            2. Verify the upstream tag v${{ needs.check-version.outputs.version }} exists
+            3. Check if the Dockerfile or build context has issues
+            4. Consider running the build manually with debug enabled
+            
+            @claude can you help debug this build failure?
+            
+            This issue was automatically created by the CI/CD pipeline.
+            `;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['ci/cd', 'openmemory', 'build-failure', 'automated']
+            });
+
   update-compose:
     runs-on: ubuntu-latest
-    needs: [build-api, build-ui]
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: [check-version, build-api, build-ui]
+    if: success() && needs.check-version.outputs.should_build == 'true'
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update docker-compose.yml with new images
+      - name: Update docker-compose.yml with versioned images
         run: |
-          # Get the latest image digests
-          API_DIGEST=$(docker manifest inspect ${{ env.IMAGE_API }}:latest | jq -r '.manifests[0].digest')
-          UI_DIGEST=$(docker manifest inspect ${{ env.IMAGE_UI }}:latest | jq -r '.manifests[0].digest')
+          VERSION="${{ needs.check-version.outputs.version }}"
           
-          # Update the docker-compose.yml file
-          sed -i "s|image: .*openmemory.*api.*|image: ${{ env.IMAGE_API }}@${API_DIGEST}|g" openmemory/docker-compose.yml
-          sed -i "s|image: .*openmemory.*ui.*|image: ${{ env.IMAGE_UI }}@${UI_DIGEST}|g" openmemory/docker-compose.yml
+          # Update the docker-compose.yml file with specific version tags
+          sed -i "s|image: ghcr.io/michaelschmidle/stacksmith-openmemory-api:.*|image: ${{ env.IMAGE_API }}:${VERSION}|g" openmemory/docker-compose.yml
+          sed -i "s|image: ghcr.io/michaelschmidle/stacksmith-openmemory-ui:.*|image: ${{ env.IMAGE_UI }}:${VERSION}|g" openmemory/docker-compose.yml
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: update OpenMemory images to latest builds"
-          title: "Update OpenMemory Docker images"
+          commit-message: "chore: update OpenMemory images to version ${{ needs.check-version.outputs.version }}"
+          title: "Update OpenMemory Docker images to version ${{ needs.check-version.outputs.version }}"
           body: |
-            Automated update of OpenMemory Docker images to latest builds.
+            Automated update of OpenMemory Docker images to version `${{ needs.check-version.outputs.version }}`.
             
-            - API: ${{ env.IMAGE_API }}:latest
-            - UI: ${{ env.IMAGE_UI }}:latest
+            ## Changes
+            - **API**: ${{ env.IMAGE_API }}:${{ needs.check-version.outputs.version }}
+            - **UI**: ${{ env.IMAGE_UI }}:${{ needs.check-version.outputs.version }}
             
-            Built from upstream mem0ai/mem0 repository.
-          branch: update-openmemory-images
+            ## Source
+            Built from upstream mem0ai/mem0 repository tag `v${{ needs.check-version.outputs.version }}`.
+            
+            ## Verification
+            - ✅ Images built successfully
+            - ✅ Version ${{ needs.check-version.outputs.version }} detected from upstream
+            - ✅ Docker compose file updated
+            
+            🤖 Generated with [Claude Code](https://claude.ai/code)
+            
+            Co-Authored-By: Claude <noreply@anthropic.com>
+          branch: update-openmemory-images-v${{ needs.check-version.outputs.version }}
           delete-branch: true
+
+      - name: Create issue on compose update failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `OpenMemory CI/CD: Failed to update docker-compose.yml for version ${{ needs.check-version.outputs.version }}`;
+            const body = `
+            ## Issue Summary
+            The OpenMemory docker-compose.yml update failed for version \`${{ needs.check-version.outputs.version }}\`.
+            
+            **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            **Version**: ${{ needs.check-version.outputs.version }}
+            **Trigger**: ${{ github.event_name }}
+            
+            ## Build Status
+            - **API Build**: ${{ needs.build-api.result }}
+            - **UI Build**: ${{ needs.build-ui.result }}
+            
+            ## Next Steps
+            1. Check the workflow logs for specific error messages
+            2. Verify the docker-compose.yml file format
+            3. Check if the image tags are correct
+            4. Consider updating the compose file manually
+            
+            @claude can you help fix the docker-compose.yml update?
+            
+            This issue was automatically created by the CI/CD pipeline.
+            `;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['ci/cd', 'openmemory', 'compose-update', 'automated']
+            });

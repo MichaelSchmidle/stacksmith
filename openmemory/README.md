@@ -8,6 +8,14 @@ Privacy-first AI memory layer for MCP clients. Provides persistent memory across
 - **Qdrant vector database** for semantic memory
 - **PostgreSQL database** for relational data
 
+## Custom Images
+
+This deployment uses custom-built images from the official mem0ai/mem0 repository:
+- **API**: `ghcr.io/michaelschmidle/stacksmith-openmemory-api:latest`
+- **UI**: `ghcr.io/michaelschmidle/stacksmith-openmemory-ui:latest`
+
+Images are automatically built daily via GitHub Actions when new upstream versions are detected.
+
 ## Features
 - **Privacy-first**: All data stored locally
 - **MCP Integration**: Compatible with Claude Desktop, Cursor, Windsurf
