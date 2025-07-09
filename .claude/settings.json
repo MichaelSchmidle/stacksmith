@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/pre-commit-documentation-check.sh"
+            "command": "./.claude/pre-commit-docs-validation.sh"
           }
         ]
       }

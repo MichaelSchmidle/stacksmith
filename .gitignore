@@ -1,3 +1,6 @@
 # Ignore all .env files everywhere
 .env
 **/.env
+
+# Ignore local Claude settings
+.claude/settings.local.json
