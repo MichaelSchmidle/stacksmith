@@ -1,6 +1,6 @@
 # OpenMemory MCP Stack
 
-OpenMemory MCP is a memory management service that provides persistent context and memory capabilities for AI applications. This stack combines Qdrant vector database for storage with the OpenMemory MCP server for intelligent memory operations.
+OpenMemory MCP is a memory management service that provides persistent context and memory capabilities for AI applications. This stack combines Qdrant vector database for storage with the OpenMemory MCP server for intelligent memory operations and a web UI for easy interaction.
 
 ## Features
 
@@ -13,6 +13,7 @@ OpenMemory MCP is a memory management service that provides persistent context a
 ## Services
 
 - **OpenMemory MCP**: Memory management server (`mem0/openmemory-mcp:latest`)
+- **OpenMemory UI**: Web interface for memory management (`mem0/openmemory-ui:latest`)
 - **Qdrant**: Vector database for memory storage (`qdrant/qdrant:latest`)
 
 ## Quick Start
@@ -62,17 +63,20 @@ docker compose -f traefik/docker-compose.yml -f openmemory/docker-compose.yml up
 
 ## Usage
 
-1. **Access Service**: Navigate to your configured hostname (e.g., `https://mem.yourdomain.com`)
+1. **Web Interface**: Navigate to your configured hostname (e.g., `https://mem.yourdomain.com`) for the web interface
 
-2. **MCP Integration**: Configure your AI client to use the OpenMemory MCP server:
-   - Server endpoint: `https://mem.yourdomain.com`
+2. **API Access**: Direct API access via the MCP server at `/api` path (e.g., `https://mem.yourdomain.com/api`)
+
+3. **MCP Integration**: Configure your AI client to use the OpenMemory MCP server:
+   - Server endpoint: `https://mem.yourdomain.com/api`
    - Protocol: Model Context Protocol (MCP)
 
-3. **Memory Operations**: The service provides:
+4. **Memory Operations**: The service provides:
    - Context storage and retrieval
    - Semantic memory search
    - Conversation history persistence
    - Cross-session memory continuity
+   - Web-based memory management interface
 
 ## Configuration
 

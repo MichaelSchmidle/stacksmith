@@ -30,11 +30,34 @@ services:
       - stacksmith
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.openmemory.rule=Host(`${OPENMEMORY_HOSTNAME}`)"
-      - "traefik.http.routers.openmemory.entrypoints=websecure-tailscale"
-      - "traefik.http.routers.openmemory.tls.certresolver=stacksmith"
-      - "traefik.http.services.openmemory.loadbalancer.server.port=8765"
-      - "traefik.http.routers.openmemory.middlewares=secure-headers@docker"
+      - "traefik.http.routers.openmemory-api.rule=Host(`${OPENMEMORY_HOSTNAME}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.openmemory-api.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.openmemory-api.tls.certresolver=stacksmith"
+      - "traefik.http.services.openmemory-api.loadbalancer.server.port=8765"
+      - "traefik.http.routers.openmemory-api.middlewares=secure-headers@docker"
+
+  openmemory-ui:
+    image: mem0/openmemory-ui:latest
+    container_name: stacksmith_openmemory_ui
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=https://${OPENMEMORY_HOSTNAME}/api
+      - NEXT_PUBLIC_USER_ID=${OPENMEMORY_USER}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    depends_on:
+      - openmemory
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openmemory-ui.rule=Host(`${OPENMEMORY_HOSTNAME}`)"
+      - "traefik.http.routers.openmemory-ui.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.openmemory-ui.tls.certresolver=stacksmith"
+      - "traefik.http.services.openmemory-ui.loadbalancer.server.port=3000"
+      - "traefik.http.routers.openmemory-ui.middlewares=secure-headers@docker"
+      - "traefik.http.routers.openmemory-ui.priority=1"
 
 volumes:
   openmemory-storage:
