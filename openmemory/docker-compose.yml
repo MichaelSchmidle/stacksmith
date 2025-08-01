@@ -1,0 +1,45 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: stacksmith_qdrant
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - openmemory-storage:/qdrant/storage
+    networks:
+      - stacksmith
+
+  openmemory:
+    image: mem0/openmemory-mcp:latest
+    container_name: stacksmith_openmemory
+    restart: unless-stopped
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - USER=${OPENMEMORY_USER}
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    depends_on:
+      - qdrant
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openmemory.rule=Host(`${OPENMEMORY_HOSTNAME}`)"
+      - "traefik.http.routers.openmemory.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.openmemory.tls.certresolver=stacksmith"
+      - "traefik.http.services.openmemory.loadbalancer.server.port=8765"
+      - "traefik.http.routers.openmemory.middlewares=secure-headers@docker"
+
+volumes:
+  openmemory-storage:
+    name: stacksmith_openmemory_storage
+
+networks:
+  stacksmith:
+    external: true

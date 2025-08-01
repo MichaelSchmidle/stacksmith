@@ -28,16 +28,16 @@ docker network create stacksmith
 
 1. Copy the environment template:
 ```bash
-cp mem/.env.example mem/.env
+cp openmemory/.env.example openmemory/.env
 ```
 
-2. Edit `mem/.env` with your configuration:
+2. Edit `openmemory/.env` with your configuration:
 ```bash
 # OpenMemory Configuration
-MEM_HOSTNAME=mem.yourdomain.com
+OPENMEMORY_HOSTNAME=mem.yourdomain.com
 
 # User Configuration - Set your username
-MEM_USER=yourusername
+OPENMEMORY_USER=yourusername
 
 # OpenAI Configuration - Required for memory operations
 OPENAI_API_KEY=sk-your-openai-api-key-here
@@ -52,12 +52,12 @@ TZ=Europe/Zurich
 
 Deploy the OpenMemory stack:
 ```bash
-docker compose -f mem/docker-compose.yml up -d
+docker compose -f openmemory/docker-compose.yml up -d
 ```
 
 Deploy with Traefik (recommended):
 ```bash
-docker compose -f traefik/docker-compose.yml -f mem/docker-compose.yml up -d
+docker compose -f traefik/docker-compose.yml -f openmemory/docker-compose.yml up -d
 ```
 
 ## Usage
@@ -80,10 +80,10 @@ docker compose -f traefik/docker-compose.yml -f mem/docker-compose.yml up -d
 The service requires a valid OpenAI API key for memory processing and embeddings. Obtain your key from the OpenAI dashboard and set it in the environment configuration.
 
 ### User Configuration
-Set the `MEM_USER` variable to your desired username for memory isolation and organization.
+Set the `OPENMEMORY_USER` variable to your desired username for memory isolation and organization.
 
 ### Qdrant Database
-The Qdrant vector database runs on port 6333 internally and stores memory data in the `mem-storage` volume for persistence.
+The Qdrant vector database runs on port 6333 internally and stores memory data in the `openmemory-storage` volume for persistence.
 
 ## Security Notes
 
@@ -97,10 +97,10 @@ The Qdrant vector database runs on port 6333 internally and stores memory data i
 ### Service Not Starting
 - Verify OpenAI API key is valid and set correctly
 - Check that the stacksmith network exists
-- Ensure no port conflicts on 6333 or 8765
+- Ensure no port conflicts on 8765 (Qdrant runs internally only)
 
 ### Memory Not Persisting
-- Verify the mem-storage volume is properly mounted
+- Verify the openmemory-storage volume is properly mounted
 - Check Qdrant logs for database connection issues
 - Ensure proper PUID/PGID permissions for volume access
 
