@@ -8,6 +8,8 @@ services:
       - --api.insecure=false
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
+      - --providers.file.directory=/dynamic
+      - --providers.file.watch=true
       - --entrypoints.web-tailscale.address=:80
       - --entrypoints.websecure-tailscale.address=:443
       - --entrypoints.web-secondary.address=:8080
@@ -30,6 +32,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-certificates:/letsencrypt
+      - ./dynamic:/dynamic:ro
+      - ./certs:/certs:ro
     networks:
       - stacksmith
     labels:
