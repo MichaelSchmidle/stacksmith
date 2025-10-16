@@ -1,6 +1,6 @@
 services:
   ghost:
-    image: ghost:5-alpine
+    image: ghost:${GHOST_VERSION:-6-alpine}
     container_name: stacksmith_ghost
     restart: unless-stopped
     environment:
