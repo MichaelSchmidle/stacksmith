@@ -25,7 +25,11 @@ services:
 
       # Default configuration - Home Assistant will prompt for setup via UI
       default_config:
+
+      # Enable UI-created automations
+      automation: !include automations.yaml
       EOF
+        touch /config/automations.yaml
         echo 'Initial configuration created successfully'
       else
         echo 'Configuration already exists, skipping...'
