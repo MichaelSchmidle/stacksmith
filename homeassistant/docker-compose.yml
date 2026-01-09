@@ -50,7 +50,7 @@ services:
       - "traefik.http.routers.homeassistant.rule=Host(`${HOMEASSISTANT_HOSTNAME}`)"
       - "traefik.http.routers.homeassistant.entrypoints=websecure-tailscale"
       - "traefik.http.routers.homeassistant.tls.certresolver=stacksmith"
-      - "traefik.http.services.homeassistant.loadbalancer.server.url=http://${HOMEASSISTANT_LAN_IP}:8123"
+      - "traefik.http.services.homeassistant.loadbalancer.server.url=http://${HOMEASSISTANT_LAN_HOST}:8123"
       - "traefik.http.routers.homeassistant.middlewares=secure-headers@docker"
 
 volumes:

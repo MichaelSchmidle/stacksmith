@@ -17,7 +17,7 @@ cp homeassistant/.env.example homeassistant/.env
 | Variable | Description |
 |----------|-------------|
 | `HOMEASSISTANT_HOSTNAME` | Public hostname for Traefik routing |
-| `HOMEASSISTANT_LAN_IP` | Docker host's LAN IP (for Traefik to reach HA) |
+| `HOMEASSISTANT_LAN_HOST` | Docker host's LAN address (IP or resolvable hostname) |
 
 ## Network Architecture
 
