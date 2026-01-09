@@ -17,12 +17,11 @@ services:
       http:
         # Required for reverse proxy setups
         use_x_forwarded_for: true
-        # Trust the Docker network ranges where Traefik runs
+        # Trust Traefik reverse proxy (Docker networks and common LAN ranges)
         trusted_proxies:
-          - 172.18.0.0/16
-          - 172.19.0.0/16
-          - 172.20.0.0/16
-          - 172.21.0.0/16
+          - 172.16.0.0/12
+          - 192.168.0.0/16
+          - 10.0.0.0/8
 
       # Default configuration - Home Assistant will prompt for setup via UI
       default_config:
@@ -39,8 +38,7 @@ services:
     restart: unless-stopped
     depends_on:
       - homeassistant-init
-    networks:
-      - stacksmith
+    network_mode: host
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -52,12 +50,8 @@ services:
       - "traefik.http.routers.homeassistant.rule=Host(`${HOMEASSISTANT_HOSTNAME}`)"
       - "traefik.http.routers.homeassistant.entrypoints=websecure-tailscale"
       - "traefik.http.routers.homeassistant.tls.certresolver=stacksmith"
-      - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
+      - "traefik.http.services.homeassistant.loadbalancer.server.url=http://${HOMEASSISTANT_LAN_IP}:8123"
       - "traefik.http.routers.homeassistant.middlewares=secure-headers@docker"
-
-networks:
-  stacksmith:
-    external: true
 
 volumes:
   homeassistant-config:

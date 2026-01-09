@@ -11,8 +11,25 @@ Smart home automation platform with web-based device integration.
 
 ```bash
 cp homeassistant/.env.example homeassistant/.env
-# Edit with your hostname
+# Edit with your hostname and LAN IP
 ```
+
+| Variable | Description |
+|----------|-------------|
+| `HOMEASSISTANT_HOSTNAME` | Public hostname for Traefik routing |
+| `HOMEASSISTANT_LAN_IP` | Docker host's LAN IP (for Traefik to reach HA) |
+
+## Network Architecture
+
+This stack uses **host networking** for Home Assistant, enabling:
+- mDNS/Bonjour discovery (Apple TV, Chromecast, etc.)
+- Bidirectional communication with devices that need callbacks
+- Full access to LAN broadcast traffic
+
+Traefik proxies to Home Assistant via the host's LAN IP, preserving:
+- SSL termination and certificate management
+- Tailscale VPN access
+- Consistent hostname routing
 
 **Pre-configured for Traefik**: Reverse proxy settings included, standard onboarding preserved.
 
