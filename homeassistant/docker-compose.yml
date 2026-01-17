@@ -43,7 +43,7 @@ services:
     depends_on:
       - homeassistant-init
     devices:
-      - /dev/zigbee:/dev/zigbee
+      ${ZIGBEE_DEVICE:-/dev/null}:/dev/ttyUSB0
     group_add:
       - dialout
     network_mode: host
