@@ -39,6 +39,42 @@ Traefik proxies to Home Assistant via the host's LAN IP, preserving:
 docker compose -f traefik/docker-compose.yml -f homeassistant/docker-compose.yml up -d
 ```
 
+## Zigbee Coordinator (USB Dongle)
+
+For Zigbee device support (Aqara, IKEA, etc.), a USB coordinator is passed through to the container.
+
+### Host Setup
+
+1. **Identify the dongle:**
+```bash
+   ls -la /dev/ttyUSB* /dev/ttyACM*
+   udevadm info -a -n /dev/ttyUSB0 | grep -E 'idVendor|idProduct|serial'
+```
+
+2. **Create stable symlink** (`/etc/udev/rules.d/99-zigbee.rules`):
+```
+   SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="YOUR_SERIAL", SYMLINK+="zigbee"
+```
+
+3. **Reload udev:**
+```bash
+   sudo udevadm control --reload-rules
+   sudo udevadm trigger
+   ls -la /dev/zigbee  # verify symlink
+```
+
+### Container Config
+
+Add to `homeassistant` service in `docker-compose.yml`:
+```yaml
+    devices:
+      - /dev/zigbee:/dev/zigbee
+```
+
+### Home Assistant
+
+Add the **ZHA** (Zigbee Home Automation) integration, pointing to `/dev/zigbee`.
+
 ## Setup
 
 1. Access web interface at your configured hostname
