@@ -41,19 +41,6 @@ labels:
 
 **Tailscale entrypoint**: Services use `websecure-tailscale` for VPN access.
 
-### File Provider for Host-Local Services
-
-For services that listen only on the host's localhost interface (not in Docker), use the file provider instead of Docker labels.
-
-Example: `traefik/dynamic/lmstudio.example.yml`
-
-```bash
-cp traefik/dynamic/lmstudio.example.yml traefik/dynamic/lmstudio.yml
-# edit the hostname in the copied file
-```
-
-This example proxies a host-local service on `http://host.docker.internal:1234` through Traefik on the Tailscale-only HTTPS entrypoint.
-
 ## Dashboard
 
 Access dashboard at your configured hostname. Features route monitoring, service health, and SSL certificate status.
