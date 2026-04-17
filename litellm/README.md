@@ -8,8 +8,8 @@ In the current Stacksmith plan, LiteLLM sits in front of `vllm/` so clients can 
 
 - expose a single stable client endpoint
 - keep client API keys and base URLs stable
-- map friendly aliases like `chat-main` to the currently deployed backend model
-- optionally add a second embeddings alias later without changing clients again
+- map a friendly client-facing alias to the currently deployed backend model
+- optionally add a second embeddings alias without changing clients again
 
 ## Environment Configuration
 
@@ -21,7 +21,7 @@ Important settings:
 
 - `LITELLM_HOSTNAME` - Traefik hostname for the proxy
 - `LITELLM_MASTER_KEY` - client-facing API key for LiteLLM (must start with `sk-`)
-- `LITELLM_CHAT_ALIAS` - stable model name clients should use, e.g. `chat-main`
+- `LITELLM_MODEL_ALIAS` - stable model name clients should use, e.g. `primary-model`
 - `LITELLM_UPSTREAM_MODEL` - backend model name exposed by vLLM, e.g. `primary-chat`
 - `LITELLM_VLLM_API_BASE` - internal vLLM URL, usually `http://vllm:8000`
 
@@ -37,8 +37,8 @@ docker compose -f traefik/docker-compose.yml -f vllm/docker-compose.yml -f litel
 
 Recommended client-facing aliases:
 
-- `chat-main` - primary chat model
-- `embed-main` - future embeddings model
+- `primary-model` - primary chat model
+- `embed-main` - embeddings model
 
 This keeps client configuration stable even when the backend model changes.
 

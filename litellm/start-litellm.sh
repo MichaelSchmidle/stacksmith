@@ -15,7 +15,7 @@ python3 - <<'PY'
 import os
 from pathlib import Path
 
-chat_alias = os.environ.get("LITELLM_CHAT_ALIAS", "chat-main")
+model_alias = os.environ.get("LITELLM_MODEL_ALIAS", "primary-model")
 upstream_model = os.environ["LITELLM_UPSTREAM_MODEL"]
 vllm_api_base = os.environ.get("LITELLM_VLLM_API_BASE", "http://vllm:8000")
 vllm_api_key = os.environ.get("LITELLM_VLLM_API_KEY", "placeholder")
@@ -24,7 +24,7 @@ master_key = os.environ["LITELLM_MASTER_KEY"]
 
 lines = [
     "model_list:",
-    f"  - model_name: {chat_alias}",
+    f"  - model_name: {model_alias}",
     "    litellm_params:",
     f"      model: hosted_vllm/{upstream_model}",
     f"      api_base: {vllm_api_base}",
