@@ -1,12 +1,12 @@
 # vLLM Inference Runtime
 
-Internal model-serving runtime for GPU-backed inference hosts such as `inf1-ein`.
+Internal model-serving runtime for GPU-backed inference hosts.
 
 This service is intentionally **runtime-only**. It serves one model at a time and is designed to sit behind a stable frontend such as LiteLLM.
 
 ## What this stack is for
 
-- Serve one primary chat model on Sparky / `inf1-ein`
+- Serve one primary chat or embedding model at a time
 - Keep model/runtime selection env-driven
 - Expose the OpenAI-compatible vLLM API locally on `127.0.0.1:${VLLM_HOST_PORT:-8000}` for testing
 - Provide an internal Docker-network backend for the `litellm/` stack
@@ -22,7 +22,7 @@ Important settings:
 - `VLLM_MODEL` - actual model to load
 - `VLLM_SERVED_MODEL_NAME` - stable backend name exposed by vLLM
 - `VLLM_QUANTIZATION` - leave empty for unquantized models, set to `modelopt` for NVIDIA NVFP4 checkpoints
-- `VLLM_GPU_MEMORY_UTILIZATION` - start conservative on Spark (`0.70` is a good default)
+- `VLLM_GPU_MEMORY_UTILIZATION` - start conservative (`0.70` is a good default on new GPU/runtime combinations)
 - `HF_TOKEN` - optional but useful for higher Hugging Face rate limits
 
 ## Deployment
@@ -39,11 +39,11 @@ Deploy it together with Traefik + LiteLLM:
 docker compose -f traefik/docker-compose.yml -f vllm/docker-compose.yml -f litellm/docker-compose.yml up -d
 ```
 
-## Notes for DGX Spark / Blackwell
+## Notes
 
-- Current Spark-friendly nightly image (`vllm/vllm-openai:cu130-nightly`) is a good fit for Blackwell support
-- At the moment, this stack applies a small startup hotfix (`pandas`) because the nightly image currently misses that dependency on first launch
-- When upstream fixes the image, set `VLLM_PRELAUNCH_PIP_PACKAGES=` to disable the hotfix
+- The default image in `.env.example` is a CUDA 13 nightly that is useful on newer NVIDIA systems, but you should pin the image tag that fits your hardware/runtime best
+- At the moment, this stack can optionally apply small startup hotfix packages (for example `pandas`) if a chosen image is missing a runtime dependency on first launch
+- When upstream images no longer need that workaround, set `VLLM_PRELAUNCH_PIP_PACKAGES=` to disable it
 
 ## Operating Model
 
