@@ -1,25 +1,35 @@
 services:
+  litellm-db:
+    image: postgres:16-alpine
+    container_name: stacksmith_litellm_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${LITELLM_DB_NAME:-litellm}
+      POSTGRES_USER: ${LITELLM_DB_USER:-litellm}
+      POSTGRES_PASSWORD: ${LITELLM_DB_PASSWORD}
+    volumes:
+      - litellm-db-data:/var/lib/postgresql/data
+    networks:
+      - stacksmith
+
   litellm:
-    image: ${LITELLM_IMAGE:-ghcr.io/berriai/litellm:main-stable}
+    image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm-database:main-latest}
     container_name: stacksmith_litellm
     restart: unless-stopped
-    entrypoint:
-      - /bin/bash
-      - /app/start-litellm.sh
+    depends_on:
+      - litellm-db
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
-      LITELLM_HOSTNAME: ${LITELLM_HOSTNAME}
-      LITELLM_MODEL_ALIAS: ${LITELLM_MODEL_ALIAS:-primary-model}
-      LITELLM_UPSTREAM_MODEL: ${LITELLM_UPSTREAM_MODEL}
-      LITELLM_VLLM_API_BASE: ${LITELLM_VLLM_API_BASE:-http://vllm:8000}
-      LITELLM_VLLM_API_KEY: ${LITELLM_VLLM_API_KEY:-placeholder}
-      LITELLM_SUPPORTS_SYSTEM_MESSAGE: ${LITELLM_SUPPORTS_SYSTEM_MESSAGE:-false}
-      LITELLM_EMBED_ALIAS: ${LITELLM_EMBED_ALIAS:-}
-      LITELLM_EMBED_UPSTREAM_MODEL: ${LITELLM_EMBED_UPSTREAM_MODEL:-}
-      LITELLM_EMBED_API_BASE: ${LITELLM_EMBED_API_BASE:-}
-      LITELLM_EMBED_API_KEY: ${LITELLM_EMBED_API_KEY:-placeholder}
+      DATABASE_URL: postgresql://${LITELLM_DB_USER:-litellm}:${LITELLM_DB_PASSWORD}@litellm-db:5432/${LITELLM_DB_NAME:-litellm}
+    command:
+      - --config
+      - /app/config.yaml
+      - --port
+      - "4000"
+      - --host
+      - "0.0.0.0"
     volumes:
-      - ./start-litellm.sh:/app/start-litellm.sh:ro
+      - ./config.yaml:/app/config.yaml:ro
     networks:
       - stacksmith
     labels:
@@ -29,6 +39,10 @@ services:
       - "traefik.http.routers.litellm.tls.certresolver=stacksmith"
       - "traefik.http.services.litellm.loadbalancer.server.port=4000"
       - "traefik.http.routers.litellm.middlewares=secure-headers@docker"
+
+volumes:
+  litellm-db-data:
+    name: stacksmith_litellm_db_data
 
 networks:
   stacksmith:
