@@ -86,6 +86,8 @@ Each service is in its own directory with complete documentation:
 - **Matomo** (`matomo/`) - Privacy-focused web analytics
 - **Uptime Kuma** (`uptimekuma/`) - Uptime monitoring
 - **Home Assistant** (`homeassistant/`) - Home automation platform
+- **vLLM** (`vllm/`) - GPU-backed OpenAI-compatible inference runtime
+- **LiteLLM** (`litellm/`) - Stable OpenAI-compatible frontend / model alias gateway
 
 Each service includes:
 
@@ -156,6 +158,10 @@ docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
 ```bash
 # Add multiple services to core infrastructure
 docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f pihole/docker-compose.yml -f uptimekuma/docker-compose.yml up -d
+
+# Example AI deployment on a GPU host
+# (stable endpoint via LiteLLM, actual model runtime via vLLM)
+docker compose -f traefik/docker-compose.yml -f vllm/docker-compose.yml -f litellm/docker-compose.yml up -d
 ```
 
 ### Remote Agent Setup
@@ -253,6 +259,7 @@ When adding new services:
 5. Join the `stacksmith` external network
 6. Document all configuration in service README
 7. **Test locally** before committing changes
+8. Prefer small env-driven configuration surfaces over hard-coded per-deployment values
 
 This repository represents a mature, production-ready Docker infrastructure system suitable for personal use, home labs, or small to medium business deployments.
 

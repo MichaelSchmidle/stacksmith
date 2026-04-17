@@ -1,0 +1,35 @@
+services:
+  vllm:
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:cu130-nightly}
+    container_name: stacksmith_vllm
+    restart: unless-stopped
+    entrypoint:
+      - /bin/bash
+      - /app/start-vllm.sh
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+      VLLM_MODEL: ${VLLM_MODEL}
+      VLLM_SERVED_MODEL_NAME: ${VLLM_SERVED_MODEL_NAME:-}
+      VLLM_QUANTIZATION: ${VLLM_QUANTIZATION:-}
+      VLLM_GPU_MEMORY_UTILIZATION: ${VLLM_GPU_MEMORY_UTILIZATION:-0.70}
+      VLLM_MAX_MODEL_LEN: ${VLLM_MAX_MODEL_LEN:-8192}
+      VLLM_API_KEY: ${VLLM_API_KEY:-}
+      VLLM_EXTRA_ARGS: ${VLLM_EXTRA_ARGS:-}
+      VLLM_PRELAUNCH_PIP_PACKAGES: ${VLLM_PRELAUNCH_PIP_PACKAGES:-pandas}
+    volumes:
+      - vllm-hf-cache:/root/.cache/huggingface
+      - ./start-vllm.sh:/app/start-vllm.sh:ro
+    ipc: host
+    gpus: all
+    ports:
+      - 127.0.0.1:${VLLM_HOST_PORT:-8000}:8000
+    networks:
+      - stacksmith
+
+volumes:
+  vllm-hf-cache:
+    name: stacksmith_vllm_hf_cache
+
+networks:
+  stacksmith:
+    external: true

@@ -1,0 +1,35 @@
+services:
+  litellm:
+    image: ${LITELLM_IMAGE:-ghcr.io/berriai/litellm:main-stable}
+    container_name: stacksmith_litellm
+    restart: unless-stopped
+    entrypoint:
+      - /bin/bash
+      - /app/start-litellm.sh
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      LITELLM_HOSTNAME: ${LITELLM_HOSTNAME}
+      LITELLM_CHAT_ALIAS: ${LITELLM_CHAT_ALIAS:-chat-main}
+      LITELLM_UPSTREAM_MODEL: ${LITELLM_UPSTREAM_MODEL}
+      LITELLM_VLLM_API_BASE: ${LITELLM_VLLM_API_BASE:-http://vllm:8000}
+      LITELLM_VLLM_API_KEY: ${LITELLM_VLLM_API_KEY:-placeholder}
+      LITELLM_SUPPORTS_SYSTEM_MESSAGE: ${LITELLM_SUPPORTS_SYSTEM_MESSAGE:-false}
+      LITELLM_EMBED_ALIAS: ${LITELLM_EMBED_ALIAS:-}
+      LITELLM_EMBED_UPSTREAM_MODEL: ${LITELLM_EMBED_UPSTREAM_MODEL:-}
+      LITELLM_EMBED_API_BASE: ${LITELLM_EMBED_API_BASE:-}
+      LITELLM_EMBED_API_KEY: ${LITELLM_EMBED_API_KEY:-placeholder}
+    volumes:
+      - ./start-litellm.sh:/app/start-litellm.sh:ro
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.litellm.rule=Host(`${LITELLM_HOSTNAME}`)"
+      - "traefik.http.routers.litellm.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.litellm.tls.certresolver=stacksmith"
+      - "traefik.http.services.litellm.loadbalancer.server.port=4000"
+      - "traefik.http.routers.litellm.middlewares=secure-headers@docker"
+
+networks:
+  stacksmith:
+    external: true
