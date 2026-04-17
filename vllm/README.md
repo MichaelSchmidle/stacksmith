@@ -43,6 +43,7 @@ docker compose -f traefik/docker-compose.yml -f vllm/docker-compose.yml -f litel
 
 - The compose file currently pins a CUDA 13 nightly image that is useful on newer NVIDIA systems. If you need a different image/tag for your hardware/runtime, change the compose file to match the rest of the repo's style
 - The runtime bootstrap now lives directly in the container entrypoint, so Git/Portainer deployments do not depend on a fragile single-file script bind mount
+- The bootstrap is implemented as a tiny inline Python launcher rather than bash, to avoid Compose/Portainer interpolation problems with `${...}` shell syntax
 - At the moment, this stack can optionally apply small startup hotfix packages (for example `pandas`) if a chosen image is missing a runtime dependency on first launch
 - When upstream images no longer need that workaround, set `VLLM_PRELAUNCH_PIP_PACKAGES=` to disable it
 

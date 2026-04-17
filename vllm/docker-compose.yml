@@ -4,47 +4,50 @@ services:
     container_name: stacksmith_vllm
     restart: unless-stopped
     entrypoint:
-      - /bin/bash
-      - -lc
+      - /usr/bin/env
+      - python3
+      - -c
       - |
-        set -euo pipefail
+        import os, shlex, subprocess, sys
+        model = os.environ.get("VLLM_MODEL", "")
+        if not model:
+            print("VLLM_MODEL must be set", file=sys.stderr)
+            raise SystemExit(1)
 
-        if [[ -z "${VLLM_MODEL:-}" ]]; then
-          echo "VLLM_MODEL must be set" >&2
-          exit 1
-        fi
+        prelaunch = os.environ.get("VLLM_PRELAUNCH_PIP_PACKAGES", "").strip()
+        if prelaunch:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "-q", *shlex.split(prelaunch)],
+                check=True,
+            )
 
-        if [[ -n "${VLLM_PRELAUNCH_PIP_PACKAGES:-}" ]]; then
-          python3 -m pip install -q ${VLLM_PRELAUNCH_PIP_PACKAGES}
-        fi
+        args = [
+            "vllm",
+            "serve",
+            model,
+            "--host", "0.0.0.0",
+            "--port", "8000",
+            "--gpu-memory-utilization", os.environ.get("VLLM_GPU_MEMORY_UTILIZATION", "0.70"),
+            "--max-model-len", os.environ.get("VLLM_MAX_MODEL_LEN", "8192"),
+        ]
 
-        args=(
-          serve "${VLLM_MODEL}"
-          --host 0.0.0.0
-          --port 8000
-          --gpu-memory-utilization "${VLLM_GPU_MEMORY_UTILIZATION:-0.70}"
-          --max-model-len "${VLLM_MAX_MODEL_LEN:-8192}"
-        )
+        served_model_name = os.environ.get("VLLM_SERVED_MODEL_NAME", "").strip()
+        if served_model_name:
+            args += ["--served-model-name", served_model_name]
 
-        if [[ -n "${VLLM_SERVED_MODEL_NAME:-}" ]]; then
-          args+=(--served-model-name "${VLLM_SERVED_MODEL_NAME}")
-        fi
+        quantization = os.environ.get("VLLM_QUANTIZATION", "").strip()
+        if quantization:
+            args += ["--quantization", quantization]
 
-        if [[ -n "${VLLM_QUANTIZATION:-}" ]]; then
-          args+=(--quantization "${VLLM_QUANTIZATION}")
-        fi
+        api_key = os.environ.get("VLLM_API_KEY", "").strip()
+        if api_key:
+            args += ["--api-key", api_key]
 
-        if [[ -n "${VLLM_API_KEY:-}" ]]; then
-          args+=(--api-key "${VLLM_API_KEY}")
-        fi
+        extra_args = os.environ.get("VLLM_EXTRA_ARGS", "").strip()
+        if extra_args:
+            args += shlex.split(extra_args)
 
-        if [[ -n "${VLLM_EXTRA_ARGS:-}" ]]; then
-          # shellcheck disable=SC2206
-          extra_args=(${VLLM_EXTRA_ARGS})
-          args+=("${extra_args[@]}")
-        fi
-
-        exec vllm "${args[@]}"
+        os.execvp("vllm", args)
     environment:
       HF_TOKEN: ${HF_TOKEN:-}
       VLLM_MODEL: ${VLLM_MODEL}
