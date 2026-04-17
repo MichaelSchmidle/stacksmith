@@ -41,7 +41,7 @@ docker compose -f traefik/docker-compose.yml -f vllm/docker-compose.yml -f litel
 
 ## Notes
 
-- The default image in `.env.example` is a CUDA 13 nightly that is useful on newer NVIDIA systems, but you should pin the image tag that fits your hardware/runtime best
+- The compose file currently pins a CUDA 13 nightly image that is useful on newer NVIDIA systems. If you need a different image/tag for your hardware/runtime, change the compose file to match the rest of the repo's style
 - At the moment, this stack can optionally apply small startup hotfix packages (for example `pandas`) if a chosen image is missing a runtime dependency on first launch
 - When upstream images no longer need that workaround, set `VLLM_PRELAUNCH_PIP_PACKAGES=` to disable it
 

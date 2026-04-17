@@ -13,7 +13,7 @@ services:
       - stacksmith
 
   litellm:
-    image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm-database:main-latest}
+    image: docker.litellm.ai/berriai/litellm-database:main-latest
     container_name: stacksmith_litellm
     restart: unless-stopped
     depends_on:

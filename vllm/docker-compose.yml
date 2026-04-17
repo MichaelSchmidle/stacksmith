@@ -1,6 +1,6 @@
 services:
   vllm:
-    image: ${VLLM_IMAGE:-vllm/vllm-openai:cu130-nightly}
+    image: vllm/vllm-openai:cu130-nightly
     container_name: stacksmith_vllm
     restart: unless-stopped
     entrypoint:
