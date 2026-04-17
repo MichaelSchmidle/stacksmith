@@ -35,7 +35,7 @@ docker compose -f traefik/docker-compose.yml -f litellm/docker-compose.yml up -d
 
 This stack intentionally starts with an empty `model_list` and `store_model_in_db: true`.
 
-The bootstrap config is generated inside the container at startup, so Git/Portainer deployments do not depend on a fragile single-file bind mount. The startup command is written in explicit exec-form (`/bin/sh -lc ...`) to avoid Portainer/stack parsing edge cases with multiline shell blocks.
+The bootstrap config is generated inside the container at startup, so Git/Portainer deployments do not depend on a fragile single-file bind mount. The bootstrap shell now lives in the container `entrypoint` itself, which avoids both the image's default `litellm` entrypoint and Portainer/stack parsing edge cases.
 
 That means you can add aliases/models at runtime via:
 
