@@ -86,8 +86,6 @@ Each service is in its own directory with complete documentation:
 - **Matomo** (`matomo/`) - Privacy-focused web analytics
 - **Uptime Kuma** (`uptimekuma/`) - Uptime monitoring
 - **Home Assistant** (`homeassistant/`) - Home automation platform
-- **vLLM** (`vllm/`) - GPU-backed OpenAI-compatible inference runtime
-- **LiteLLM** (`litellm/`) - Stable OpenAI-compatible frontend / model alias gateway
 
 Each service includes:
 
