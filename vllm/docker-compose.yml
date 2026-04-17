@@ -9,16 +9,19 @@ services:
       - -c
       - |
         import os, shlex, subprocess, sys
-        model = os.environ.get("VLLM_MODEL", "")
+        model = os.environ.get("STACKSMITH_MODEL", "")
         if not model:
-            print("VLLM_MODEL must be set", file=sys.stderr)
+            print("STACKSMITH_MODEL must be set", file=sys.stderr)
             raise SystemExit(1)
 
-        prelaunch = os.environ.get("VLLM_PRELAUNCH_PIP_PACKAGES", "").strip()
+        prelaunch = os.environ.get("STACKSMITH_PRELAUNCH_PIP_PACKAGES", "").strip()
         if prelaunch:
+            env = dict(os.environ)
+            env["PIP_ROOT_USER_ACTION"] = "ignore"
             subprocess.run(
                 [sys.executable, "-m", "pip", "install", "-q", *shlex.split(prelaunch)],
                 check=True,
+                env=env,
             )
 
         args = [
@@ -27,37 +30,37 @@ services:
             model,
             "--host", "0.0.0.0",
             "--port", "8000",
-            "--gpu-memory-utilization", os.environ.get("VLLM_GPU_MEMORY_UTILIZATION", "0.70"),
-            "--max-model-len", os.environ.get("VLLM_MAX_MODEL_LEN", "8192"),
+            "--gpu-memory-utilization", os.environ.get("STACKSMITH_GPU_MEMORY_UTILIZATION", "0.70"),
+            "--max-model-len", os.environ.get("STACKSMITH_MAX_MODEL_LEN", "8192"),
         ]
 
-        served_model_name = os.environ.get("VLLM_SERVED_MODEL_NAME", "").strip()
+        served_model_name = os.environ.get("STACKSMITH_SERVED_MODEL_NAME", "").strip()
         if served_model_name:
             args += ["--served-model-name", served_model_name]
 
-        quantization = os.environ.get("VLLM_QUANTIZATION", "").strip()
+        quantization = os.environ.get("STACKSMITH_QUANTIZATION", "").strip()
         if quantization:
             args += ["--quantization", quantization]
 
-        api_key = os.environ.get("VLLM_API_KEY", "").strip()
+        api_key = os.environ.get("STACKSMITH_API_KEY", "").strip()
         if api_key:
             args += ["--api-key", api_key]
 
-        extra_args = os.environ.get("VLLM_EXTRA_ARGS", "").strip()
+        extra_args = os.environ.get("STACKSMITH_EXTRA_ARGS", "").strip()
         if extra_args:
             args += shlex.split(extra_args)
 
         os.execvp("vllm", args)
     environment:
       HF_TOKEN: ${HF_TOKEN:-}
-      VLLM_MODEL: ${VLLM_MODEL}
-      VLLM_SERVED_MODEL_NAME: ${VLLM_SERVED_MODEL_NAME:-}
-      VLLM_QUANTIZATION: ${VLLM_QUANTIZATION:-}
-      VLLM_GPU_MEMORY_UTILIZATION: ${VLLM_GPU_MEMORY_UTILIZATION:-0.70}
-      VLLM_MAX_MODEL_LEN: ${VLLM_MAX_MODEL_LEN:-8192}
-      VLLM_API_KEY: ${VLLM_API_KEY:-}
-      VLLM_EXTRA_ARGS: ${VLLM_EXTRA_ARGS:-}
-      VLLM_PRELAUNCH_PIP_PACKAGES: ${VLLM_PRELAUNCH_PIP_PACKAGES:-pandas}
+      STACKSMITH_MODEL: ${STACKSMITH_MODEL}
+      STACKSMITH_SERVED_MODEL_NAME: ${STACKSMITH_SERVED_MODEL_NAME:-}
+      STACKSMITH_QUANTIZATION: ${STACKSMITH_QUANTIZATION:-}
+      STACKSMITH_GPU_MEMORY_UTILIZATION: ${STACKSMITH_GPU_MEMORY_UTILIZATION:-0.70}
+      STACKSMITH_MAX_MODEL_LEN: ${STACKSMITH_MAX_MODEL_LEN:-8192}
+      STACKSMITH_API_KEY: ${STACKSMITH_API_KEY:-}
+      STACKSMITH_EXTRA_ARGS: ${STACKSMITH_EXTRA_ARGS:-}
+      STACKSMITH_PRELAUNCH_PIP_PACKAGES: ${STACKSMITH_PRELAUNCH_PIP_PACKAGES:-pandas}
     volumes:
       - vllm-hf-cache:/root/.cache/huggingface
     ipc: host
