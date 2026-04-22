@@ -1,0 +1,42 @@
+services:
+  trtllm:
+    image: ${TRTLLM_IMAGE}
+    container_name: ${TRTLLM_CONTAINER_NAME}
+    restart: unless-stopped
+    gpus: all
+    environment:
+      HF_TOKEN: ${HF_TOKEN}
+      MODEL_HANDLE: ${MODEL_HANDLE}
+      TRTLLM_PORT: ${TRTLLM_PORT}
+      TRTLLM_MAX_BATCH_SIZE: ${TRTLLM_MAX_BATCH_SIZE}
+      TRTLLM_FREE_GPU_MEMORY_FRACTION: ${TRTLLM_FREE_GPU_MEMORY_FRACTION}
+      TRT_LLM_DISABLE_LOAD_WEIGHTS_IN_PARALLEL: ${TRT_LLM_DISABLE_LOAD_WEIGHTS_IN_PARALLEL}
+      TRTLLM_SERVER_ARGS: ${TRTLLM_SERVER_ARGS}
+    volumes:
+      - ${HF_HOME}:/root/.cache/huggingface
+    ipc: host
+    network_mode: host
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    command:
+      - bash
+      - -lc
+      - |
+        set -euo pipefail
+        hf download "$MODEL_HANDLE"
+        cat > /tmp/extra-llm-api-config.yml <<EOF
+        print_iter_log: false
+        kv_cache_config:
+          dtype: "auto"
+          free_gpu_memory_fraction: ${TRTLLM_FREE_GPU_MEMORY_FRACTION}
+        cuda_graph_config:
+          enable_padding: true
+        disable_overlap_scheduler: true
+        EOF
+        exec trtllm-serve "$MODEL_HANDLE" \
+          --max_batch_size "$TRTLLM_MAX_BATCH_SIZE" \
+          --trust_remote_code \
+          --port "$TRTLLM_PORT" \
+          --extra_llm_api_options /tmp/extra-llm-api-config.yml \
+          ${TRTLLM_SERVER_ARGS}

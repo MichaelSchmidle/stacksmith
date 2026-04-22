@@ -86,6 +86,7 @@ Each service is in its own directory with complete documentation:
 - **Matomo** (`matomo/`) - Privacy-focused web analytics
 - **Uptime Kuma** (`uptimekuma/`) - Uptime monitoring
 - **Home Assistant** (`homeassistant/`) - Home automation platform
+- **TensorRT-LLM for DGX Spark** (`trtllm/`) - Spark-optimized NVIDIA LLM serving stack
 
 Each service includes:
 
@@ -157,9 +158,9 @@ docker compose -f docker-compose.yml -f traefik/docker-compose.yml up -d
 # Add multiple services to core infrastructure
 docker compose -f docker-compose.yml -f traefik/docker-compose.yml -f pihole/docker-compose.yml -f uptimekuma/docker-compose.yml up -d
 
-# Example AI deployment on a GPU host
-# (stable endpoint via LiteLLM, actual model runtime via vLLM)
-docker compose -f traefik/docker-compose.yml -f vllm/docker-compose.yml -f litellm/docker-compose.yml up -d
+# Example DGX Spark deployment on a GPU host
+# (Spark-optimized TensorRT-LLM stack, typically deployed on its own)
+docker compose --env-file trtllm/.env -f trtllm/docker-compose.yml up -d
 ```
 
 ### Remote Agent Setup
