@@ -10,8 +10,8 @@ It is intentionally Spark-optimized rather than generic:
 
 The authoritative DGX Spark model lists are:
 
-- `TensorRT-LLM` for Spark: `https://build.nvidia.com/spark/trt-llm/instructions`
-- `vLLM` for Spark: `https://build.nvidia.com/spark/vllm/stacked-spark`
+- [TensorRT-LLM for Spark](https://build.nvidia.com/spark/trt-llm/instructions)
+- [vLLM for Spark](https://build.nvidia.com/spark/vllm/stacked-spark)
 
 ## Files
 
@@ -78,9 +78,14 @@ Change `MODEL_HANDLE` in `trtllm/.env` to switch runtimes without editing the co
 
 Good DGX Spark starting points from NVIDIA's curated matrix:
 
-- `nvidia/Qwen3-30B-A3B-FP4`
-- `nvidia/Gemma-4-31B-IT-NVFP4`
-- `nvidia/Llama-3.3-70B-Instruct-FP4`
+- [`nvidia/Qwen3-30B-A3B-FP4`](https://huggingface.co/nvidia/Qwen3-30B-A3B-FP4)
+- [`nvidia/Gemma-4-31B-IT-NVFP4`](https://huggingface.co/nvidia/Gemma-4-31B-IT-NVFP4)
+- [`nvidia/Llama-3.3-70B-Instruct-FP4`](https://huggingface.co/nvidia/Llama-3.3-70B-Instruct-FP4)
+
+For the broader Spark-curated list, use NVIDIA's official matrices:
+
+- [TensorRT-LLM DGX Spark model matrix](https://build.nvidia.com/spark/trt-llm/instructions)
+- [vLLM DGX Spark model matrix](https://build.nvidia.com/spark/vllm/stacked-spark)
 
 ## Tuning knobs
 
