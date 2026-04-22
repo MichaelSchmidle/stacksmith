@@ -24,7 +24,7 @@ services:
 
 volumes:
   openwebui-data:
-    name: ${OPEN_WEBUI_DATA_VOLUME}
+    name: stacksmith_open_webui_data
 
 networks:
   stacksmith:
