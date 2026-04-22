@@ -25,7 +25,7 @@ Most Stacksmith services join the external `stacksmith` Docker network and are r
 Reason:
 
 - NVIDIA's DGX Spark playbook uses host networking for TensorRT-LLM.
-- `trtllm-serve` clearly supports `--port`, but not a separate host bind flag in the current container help output.
+- The compose file passes `trtllm-serve --host "$TRTLLM_BIND_HOST" --port "$TRTLLM_PORT"` so the service can be limited to a specific LAN or Tailscale interface when needed.
 - Host networking avoids binding ambiguity and matches the configuration that already worked on this machine.
 
 That means this stack is best treated as a high-performance internal API service, not a Traefik-routed web app.
@@ -86,13 +86,19 @@ Change `MODEL_HANDLE` in `trtllm/.env` to switch runtimes without editing the co
 Good DGX Spark starting points from NVIDIA's curated matrix:
 
 - [`nvidia/Qwen3-30B-A3B-FP4`](https://huggingface.co/nvidia/Qwen3-30B-A3B-FP4)
-- [`nvidia/Gemma-4-31B-IT-NVFP4`](https://huggingface.co/nvidia/Gemma-4-31B-IT-NVFP4)
 - [`nvidia/Llama-3.3-70B-Instruct-FP4`](https://huggingface.co/nvidia/Llama-3.3-70B-Instruct-FP4)
+- [`nvidia/Phi-4-multimodal-instruct-FP4`](https://huggingface.co/nvidia/Phi-4-multimodal-instruct-FP4)
 
 For the broader Spark-curated list, use NVIDIA's official matrices:
 
 - [TensorRT-LLM DGX Spark model matrix](https://build.nvidia.com/spark/trt-llm/instructions)
 - [vLLM DGX Spark model matrix](https://build.nvidia.com/spark/vllm/stacked-spark)
+
+Important distinction:
+
+- This Stacksmith `trtllm/` service should follow the TensorRT-LLM Spark matrix.
+- Some models in NVIDIA's Spark `vLLM` matrix, including Gemma 4 NVFP4 variants, are not working targets for this TensorRT-LLM stack.
+- If you want Gemma 4 on DGX Spark, treat that as a `vLLM` path unless NVIDIA adds clear TRT-LLM support for the exact model and container version.
 
 ## Tuning knobs
 
