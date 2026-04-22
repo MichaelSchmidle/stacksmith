@@ -1,7 +1,7 @@
 services:
   trtllm:
-    image: ${TRTLLM_IMAGE}
-    container_name: ${TRTLLM_CONTAINER_NAME}
+    image: nvcr.io/nvidia/tensorrt-llm/release:1.2.0rc6
+    container_name: stacksmith_trtllm
     restart: unless-stopped
     gpus: all
     environment:
