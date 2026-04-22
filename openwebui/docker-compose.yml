@@ -1,0 +1,31 @@
+services:
+  open-webui:
+    image: ${OPEN_WEBUI_IMAGE}
+    container_name: ${OPEN_WEBUI_CONTAINER_NAME}
+    restart: unless-stopped
+    environment:
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ENABLE_OPENAI_API: ${ENABLE_OPENAI_API}
+      ENABLE_OLLAMA_API: ${ENABLE_OLLAMA_API}
+    volumes:
+      - openwebui-data:/app/backend/data
+    ports:
+      - 127.0.0.1:${OPEN_WEBUI_PORT}:8080
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.open-webui.rule=Host(`${OPEN_WEBUI_HOSTNAME}`)"
+      - "traefik.http.routers.open-webui.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.open-webui.tls.certresolver=stacksmith"
+      - "traefik.http.services.open-webui.loadbalancer.server.port=8080"
+      - "traefik.http.routers.open-webui.middlewares=secure-headers@docker"
+
+volumes:
+  openwebui-data:
+    name: ${OPEN_WEBUI_DATA_VOLUME}
+
+networks:
+  stacksmith:
+    external: true

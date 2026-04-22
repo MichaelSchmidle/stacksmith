@@ -7,6 +7,7 @@ services:
     environment:
       HF_TOKEN: ${HF_TOKEN}
       MODEL_HANDLE: ${MODEL_HANDLE}
+      TRTLLM_BIND_HOST: ${TRTLLM_BIND_HOST}
       TRTLLM_PORT: ${TRTLLM_PORT}
       TRTLLM_MAX_BATCH_SIZE: ${TRTLLM_MAX_BATCH_SIZE}
       TRTLLM_FREE_GPU_MEMORY_FRACTION: ${TRTLLM_FREE_GPU_MEMORY_FRACTION}
@@ -37,6 +38,7 @@ services:
         exec trtllm-serve "$MODEL_HANDLE" \
           --max_batch_size "$TRTLLM_MAX_BATCH_SIZE" \
           --trust_remote_code \
+          --host "$TRTLLM_BIND_HOST" \
           --port "$TRTLLM_PORT" \
           --extra_llm_api_options /tmp/extra-llm-api-config.yml \
           ${TRTLLM_SERVER_ARGS}

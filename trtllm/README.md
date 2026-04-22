@@ -43,6 +43,7 @@ cp trtllm/.env.example trtllm/.env
 ```bash
 MODEL_HANDLE=nvidia/Qwen3-30B-A3B-FP4
 HF_TOKEN=hf_your_token_here
+TRTLLM_BIND_HOST=0.0.0.0
 TRTLLM_PORT=8355
 TRTLLM_MAX_BATCH_SIZE=64
 TRTLLM_FREE_GPU_MEMORY_FRACTION=0.90
@@ -58,6 +59,12 @@ docker compose --env-file trtllm/.env -f trtllm/docker-compose.yml up -d
 
 ```bash
 curl http://127.0.0.1:8355/v1/models
+```
+
+If you plan to connect from another machine, test the network-reachable address too:
+
+```bash
+curl http://your-host-or-tailscale-ip:8355/v1/models
 ```
 
 5. Test a chat completion:
@@ -89,11 +96,21 @@ For the broader Spark-curated list, use NVIDIA's official matrices:
 
 ## Tuning knobs
 
+- `TRTLLM_BIND_HOST` controls which interface the API binds to.
 - `TRTLLM_PORT` controls the OpenAI-compatible API port on the host.
 - `TRTLLM_MAX_BATCH_SIZE` controls `trtllm-serve --max_batch_size`.
 - `TRTLLM_FREE_GPU_MEMORY_FRACTION` is written into the extra YAML config as `kv_cache_config.free_gpu_memory_fraction`.
 - `TRT_LLM_DISABLE_LOAD_WEIGHTS_IN_PARALLEL=1` can help if DGX Spark hits weight-load memory pressure.
 - `TRTLLM_SERVER_ARGS` lets you append raw extra flags to `trtllm-serve`.
+
+## Single-Host And Dual-Host Use
+
+Use the same stack in both cases. The only difference is which address clients use:
+
+- Single-host: set `TRTLLM_BIND_HOST=0.0.0.0` or a specific local interface IP, then point local clients at that host IP or Tailscale IP.
+- Dual-host: set `TRTLLM_BIND_HOST=0.0.0.0` or a specific LAN/Tailscale IP on the inference machine, then point the remote UI at that machine's reachable URL.
+
+Avoid `127.0.0.1` if another machine or another bridged container needs to reach the inference API.
 
 ## Stacksmith usage
 

@@ -87,6 +87,7 @@ Each service is in its own directory with complete documentation:
 - **Uptime Kuma** (`uptimekuma/`) - Uptime monitoring
 - **Home Assistant** (`homeassistant/`) - Home automation platform
 - **TensorRT-LLM for DGX Spark** (`trtllm/`) - Spark-optimized NVIDIA LLM serving stack
+- **Open WebUI** (`openwebui/`) - Chat interface for OpenAI-compatible local and remote models
 
 Each service includes:
 
