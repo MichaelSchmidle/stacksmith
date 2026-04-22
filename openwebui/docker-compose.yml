@@ -1,7 +1,7 @@
 services:
   open-webui:
-    image: ${OPEN_WEBUI_IMAGE}
-    container_name: ${OPEN_WEBUI_CONTAINER_NAME}
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: stacksmith_open_webui
     restart: unless-stopped
     environment:
       OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL}
