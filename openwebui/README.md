@@ -1,6 +1,6 @@
 # Open WebUI Stack
 
-Open WebUI is a self-hosted chat interface that works with OpenAI-compatible APIs, including the NVIDIA TensorRT-LLM stack in this repo.
+Open WebUI is a self-hosted chat interface that works with OpenAI-compatible APIs, including local and remote model-serving endpoints.
 
 Official docs:
 
@@ -64,7 +64,7 @@ docker compose --env-file openwebui/.env -f openwebui/docker-compose.yml up -d
 - This stack exposes a local port for easy direct access and testing, even if Traefik is not running.
 - `OPENAI_API_KEY` can be left empty if your local backend does not require auth.
 - If you point Open WebUI at a different provider later, only `OPENAI_API_BASE_URL` and optionally `OPENAI_API_KEY` need to change.
-- For the Stacksmith TensorRT-LLM stack, make sure the inference service binds to `0.0.0.0` or to a specific LAN/Tailscale IP so this URL is reachable from the UI container.
+- Make sure the inference service binds to `0.0.0.0` or to a specific LAN/Tailscale IP so this URL is reachable from the UI container.
 
 ## Validation Pattern
 
