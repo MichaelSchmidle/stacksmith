@@ -87,6 +87,7 @@ Each service is in its own directory with complete documentation:
 - **Uptime Kuma** (`uptimekuma/`) - Uptime monitoring
 - **Home Assistant** (`homeassistant/`) - Home automation platform
 - **Open WebUI** (`openwebui/`) - Chat interface for OpenAI-compatible local and remote models
+- **LiteLLM** (`litellm/`) - OpenAI-compatible model proxy for Open WebUI, Open Design, LM Studio, and hosted APIs
 - **Open Design** (`opendesign/`) - Local-first design workspace for coding agents and BYOK model APIs
 
 Each service includes:

@@ -1,6 +1,6 @@
 # Open Design Stack
 
-Open Design is a local-first, web-based design workspace that delegates generation work to coding agents or BYOK model APIs. This Stacksmith bundle runs the official single-container Docker deployment behind the shared Traefik/Tailscale entrypoint.
+Open Design is a local-first, web-based design workspace that delegates generation work to coding agents or BYOK model APIs. This Stacksmith bundle follows the official single-container Docker deployment, with Traefik/Tailscale routing added for private HTTPS access.
 
 Official sources:
 
@@ -13,13 +13,13 @@ Official sources:
 - Open Design runs in Docker on the external `stacksmith` network.
 - Traefik handles HTTPS on the Tailscale-facing entrypoint.
 - The container stores projects, conversations, artifacts, and SQLite data in the named Docker volume `stacksmith_open_design_data`.
-- The Docker image does not bundle local coding-agent CLIs. Use Open Design's BYOK API mode first, or build a custom image if a server-side local CLI is required later.
+- Model/provider configuration should live in Open Design itself or in a shared proxy such as the `litellm/` stack, not in extra Open Design tool volumes.
 
 ## Security model
 
 Open Design's own deployment docs warn not to publish the daemon directly on a public or shared LAN interface. This stack therefore:
 
-- exposes no host port directly
+- binds the direct host port to loopback only
 - routes browser access through Traefik's `websecure-tailscale` entrypoint
 - requires an `OD_API_TOKEN`
 - restricts browser API origins via `OPEN_DESIGN_ALLOWED_ORIGINS`
@@ -57,6 +57,17 @@ docker compose --env-file opendesign/.env -f opendesign/docker-compose.yml up -d
 5. Open the UI:
 
 - Through Traefik/Tailscale: `https://design.yourdomain.com`
+- Direct local loopback: `http://127.0.0.1:7456`
+
+## Using LiteLLM
+
+If you deploy the companion `litellm/` stack, configure Open Design to use the LiteLLM proxy base URL instead of binding Open Design to a particular local model runtime:
+
+```text
+http://litellm:4000/v1
+```
+
+From there, add LM Studio, vLLM, OpenAI, Anthropic, or other providers in LiteLLM and keep Open Design provider-neutral.
 
 ## Validation pattern
 

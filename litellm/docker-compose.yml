@@ -1,0 +1,75 @@
+services:
+  litellm:
+    image: docker.litellm.ai/berriai/litellm:main-stable
+    container_name: stacksmith_litellm
+    restart: unless-stopped
+    command:
+      - --config=/app/config.yaml
+      - --host=0.0.0.0
+      - --port=4000
+    environment:
+      DATABASE_URL: postgresql://${LITELLM_POSTGRES_USER}:${LITELLM_POSTGRES_PASSWORD}@litellm-db:5432/${LITELLM_POSTGRES_DB}
+      STORE_MODEL_IN_DB: "True"
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY}
+      UI_USERNAME: ${LITELLM_UI_USERNAME}
+      UI_PASSWORD: ${LITELLM_UI_PASSWORD}
+      TZ: ${TZ}
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    ports:
+      - 127.0.0.1:${LITELLM_PORT}:4000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - stacksmith
+      - litellm-internal
+    depends_on:
+      litellm-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness')"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.litellm.rule=Host(`${LITELLM_HOSTNAME}`)"
+      - "traefik.http.routers.litellm.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.litellm.tls.certresolver=stacksmith"
+      - "traefik.http.services.litellm.loadbalancer.server.port=4000"
+      - "traefik.http.routers.litellm.middlewares=secure-headers@docker"
+
+  litellm-db:
+    image: postgres:16-alpine
+    container_name: stacksmith_litellm_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${LITELLM_POSTGRES_DB}
+      POSTGRES_USER: ${LITELLM_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${LITELLM_POSTGRES_PASSWORD}
+      TZ: ${TZ}
+    volumes:
+      - litellm-db-data:/var/lib/postgresql/data
+    networks:
+      - litellm-internal
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -d "$${POSTGRES_DB}" -U "$${POSTGRES_USER}"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  litellm-db-data:
+    name: stacksmith_litellm_db_data
+
+networks:
+  stacksmith:
+    external: true
+  litellm-internal:
+    driver: bridge
