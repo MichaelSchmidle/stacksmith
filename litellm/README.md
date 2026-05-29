@@ -12,7 +12,8 @@ Official sources:
 - LiteLLM runs on the external `stacksmith` network.
 - Traefik handles HTTPS on the Tailscale-facing entrypoint.
 - PostgreSQL stores LiteLLM configuration, virtual keys, budgets, and model/provider entries.
-- Model endpoints are managed in LiteLLM, then clients use LiteLLM's `/v1` API.
+- Model endpoints are managed in the LiteLLM UI/DB, then clients use LiteLLM's `/v1` API.
+- The stack intentionally avoids bind-mounting `config.yaml`; Portainer/Git deployments can turn missing relative files into host directories, which makes LiteLLM fail with `IsADirectoryError: /app/config.yaml`.
 
 ## Architecture
 

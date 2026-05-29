@@ -4,7 +4,6 @@ services:
     container_name: stacksmith_litellm
     restart: unless-stopped
     command:
-      - --config=/app/config.yaml
       - --host=0.0.0.0
       - --port=4000
     environment:
@@ -15,8 +14,6 @@ services:
       UI_USERNAME: ${LITELLM_UI_USERNAME}
       UI_PASSWORD: ${LITELLM_UI_PASSWORD}
       TZ: ${TZ}
-    volumes:
-      - ./config.yaml:/app/config.yaml:ro
     ports:
       - 127.0.0.1:${LITELLM_PORT}:4000
     extra_hosts:
