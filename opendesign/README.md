@@ -19,7 +19,7 @@ Official sources:
 
 Open Design's own deployment docs warn not to publish the daemon directly on a public or shared LAN interface. This stack therefore:
 
-- binds the direct host port to loopback only
+- does not publish a direct host port
 - routes browser access through Traefik's `websecure-tailscale` entrypoint
 - requires an `OD_API_TOKEN`
 - restricts browser API origins via `OPEN_DESIGN_ALLOWED_ORIGINS`
@@ -57,7 +57,6 @@ docker compose --env-file opendesign/.env -f opendesign/docker-compose.yml up -d
 5. Open the UI:
 
 - Through Traefik/Tailscale: `https://design.yourdomain.com`
-- Direct local loopback: `http://127.0.0.1:7456`
 
 ## Using LiteLLM
 
