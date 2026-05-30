@@ -1,6 +1,6 @@
 # LiteLLM Stack
 
-LiteLLM is an OpenAI-compatible proxy for routing UI clients to local and hosted model providers. In Stacksmith, it becomes the shared model gateway for Open WebUI, Open Design, LM Studio, vLLM, Ollama-compatible endpoints, and hosted APIs.
+LiteLLM is an OpenAI-compatible proxy for routing UI clients to local and hosted model providers. In Stacksmith, it becomes the shared model gateway for Open WebUI, LM Studio, vLLM, Ollama-compatible endpoints, and hosted APIs.
 
 Official sources:
 
@@ -19,8 +19,7 @@ Official sources:
 
 ```text
 Open WebUI ─┐
-Open Design ├─> LiteLLM proxy ─> LM Studio / vLLM / OpenAI / Anthropic / ...
-Other apps ─┘
+Other apps ─┴─> LiteLLM proxy ─> LM Studio / vLLM / OpenAI / Anthropic / ...
 ```
 
 Recommended internal base URL for containers on the `stacksmith` network:
@@ -88,13 +87,6 @@ Open WebUI:
 ```bash
 OPENAI_API_BASE_URL=http://litellm:4000/v1
 OPENAI_API_KEY=sk-your-litellm-key
-```
-
-Open Design:
-
-```text
-Base URL: http://litellm:4000/v1
-API key: sk-your-litellm-key
 ```
 
 ## Validation pattern
