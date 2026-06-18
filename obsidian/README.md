@@ -21,8 +21,8 @@ The LinuxServer image uses `/config` as the container user's home directory for 
 This stack deliberately uses two mounts:
 
 ```text
-obsidian-config volume          -> /config
-/home/michael/ObsidianVault     -> /config/vault
+obsidian-config volume      -> /config
+host vault path             -> /config/vault
 ```
 
 Open `/config/vault` inside Obsidian when the desktop starts.
@@ -58,8 +58,8 @@ cp obsidian/.env.example obsidian/.env
 OBSIDIAN_HOSTNAME=obsidian.yourdomain.com
 OBSIDIAN_PUID=1000
 OBSIDIAN_PGID=1000
-OBSIDIAN_VAULT_PATH=/home/michael/ObsidianVault
-OBSIDIAN_CUSTOM_USER=michael
+OBSIDIAN_VAULT_PATH=/path/to/ObsidianVault
+OBSIDIAN_CUSTOM_USER=change-me
 OBSIDIAN_PASSWORD=replace-with-a-real-password
 ```
 
