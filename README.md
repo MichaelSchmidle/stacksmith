@@ -88,6 +88,7 @@ Each service is in its own directory with complete documentation:
 - **Home Assistant** (`homeassistant/`) - Home automation platform
 - **Open WebUI** (`openwebui/`) - Chat interface for OpenAI-compatible local and remote models
 - **LiteLLM** (`litellm/`) - OpenAI-compatible model proxy for Open WebUI, LM Studio, and hosted APIs
+- **Obsidian Web Desktop** (`obsidian/`) - Browser-accessible Obsidian desktop for a Syncthing-backed vault
 
 Each service includes:
 

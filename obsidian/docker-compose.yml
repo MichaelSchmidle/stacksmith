@@ -1,0 +1,33 @@
+services:
+  obsidian:
+    image: lscr.io/linuxserver/obsidian:latest
+    container_name: stacksmith_obsidian
+    restart: unless-stopped
+    environment:
+      PUID: ${OBSIDIAN_PUID}
+      PGID: ${OBSIDIAN_PGID}
+      TZ: ${TZ}
+      CUSTOM_USER: ${OBSIDIAN_CUSTOM_USER}
+      PASSWORD: ${OBSIDIAN_PASSWORD}
+      TITLE: ${OBSIDIAN_TITLE}
+    volumes:
+      - obsidian-config:/config
+      - ${OBSIDIAN_VAULT_PATH}:/config/vault
+    shm_size: "1gb"
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.obsidian.rule=Host(`${OBSIDIAN_HOSTNAME}`)"
+      - "traefik.http.routers.obsidian.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.obsidian.tls.certresolver=stacksmith"
+      - "traefik.http.services.obsidian.loadbalancer.server.port=3000"
+      - "traefik.http.routers.obsidian.middlewares=secure-headers@docker"
+
+volumes:
+  obsidian-config:
+    name: stacksmith_obsidian_config
+
+networks:
+  stacksmith:
+    external: true
