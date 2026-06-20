@@ -13,7 +13,7 @@ Official docs:
 
 - Voicebox runs on a Docker host with the NVIDIA Container Toolkit installed when GPU acceleration is desired.
 - Browser/API access is routed through Traefik on the `stacksmith` network.
-- The direct API port defaults to host loopback only: `${VOICEBOX_BIND_IP:-127.0.0.1}:${VOICEBOX_PORT}:17493`.
+- Voicebox listens on container port `17493`; Traefik routes to that fixed internal port.
 - Voicebox has no built-in authentication, so it should stay Tailscale/VPN-only or sit behind an auth middleware before broader exposure.
 - Upstream Docker currently builds from source; prebuilt GHCR images are documented as coming later, not available now.
 
@@ -46,11 +46,11 @@ docker compose --env-file voicebox/.env -f voicebox/docker-compose.yml up -d --b
 https://voicebox.yourdomain.com
 ```
 
-5. Check the local API from the Docker host:
+5. Check the routed API through Traefik:
 
 ```bash
-curl -fsS http://127.0.0.1:${VOICEBOX_PORT:-17493}/health
-curl -fsS http://127.0.0.1:${VOICEBOX_PORT:-17493}/profiles
+curl -fsS https://voicebox.yourdomain.com/health
+curl -fsS https://voicebox.yourdomain.com/profiles
 ```
 
 ## Resource guidance
