@@ -1,0 +1,58 @@
+services:
+  voicebox:
+    build:
+      context: ${VOICEBOX_BUILD_CONTEXT:-https://github.com/jamiepine/voicebox.git#main}
+    container_name: stacksmith_voicebox
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: ${VOICEBOX_LOG_LEVEL:-info}
+      NUMBA_CACHE_DIR: /tmp/numba_cache
+      TZ: ${TZ:-Europe/Zurich}
+      VOICEBOX_CORS_ORIGINS: ${VOICEBOX_CORS_ORIGINS:-}
+    ports:
+      - ${VOICEBOX_BIND_IP:-127.0.0.1}:${VOICEBOX_PORT:-17493}:17493
+    volumes:
+      - voicebox-data:/app/data
+      - voicebox-generations:/app/data/generations
+      - voicebox-huggingface-cache:/home/voicebox/.cache/huggingface
+    networks:
+      - stacksmith
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://127.0.0.1:17493/health
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: "${VOICEBOX_CPU_LIMIT:-4}"
+          memory: ${VOICEBOX_MEMORY_LIMIT:-16G}
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${VOICEBOX_NVIDIA_GPU_COUNT:-1}
+              capabilities: [gpu]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.voicebox.rule=Host(`${VOICEBOX_HOSTNAME}`)"
+      - "traefik.http.routers.voicebox.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.voicebox.tls.certresolver=stacksmith"
+      - "traefik.http.services.voicebox.loadbalancer.server.port=17493"
+      - "traefik.http.routers.voicebox.middlewares=secure-headers@docker"
+
+volumes:
+  voicebox-data:
+    name: stacksmith_voicebox_data
+  voicebox-generations:
+    name: stacksmith_voicebox_generations
+  voicebox-huggingface-cache:
+    name: stacksmith_voicebox_huggingface_cache
+
+networks:
+  stacksmith:
+    external: true
