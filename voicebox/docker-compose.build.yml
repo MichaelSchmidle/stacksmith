@@ -1,0 +1,5 @@
+services:
+  voicebox:
+    image: ${VOICEBOX_IMAGE:-stacksmith_voicebox:latest}
+    build:
+      context: ${VOICEBOX_BUILD_CONTEXT:-https://github.com/jamiepine/voicebox.git#main}

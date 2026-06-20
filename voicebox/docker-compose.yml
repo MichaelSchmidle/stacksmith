@@ -1,7 +1,6 @@
 services:
   voicebox:
-    build:
-      context: ${VOICEBOX_BUILD_CONTEXT:-https://github.com/jamiepine/voicebox.git#main}
+    image: ${VOICEBOX_IMAGE:-stacksmith_voicebox:latest}
     container_name: stacksmith_voicebox
     restart: unless-stopped
     environment:

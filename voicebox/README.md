@@ -34,19 +34,25 @@ VOICEBOX_MEMORY_LIMIT=16G
 VOICEBOX_NVIDIA_GPU_COUNT=1
 ```
 
-3. Build and start Voicebox:
+3. Build the image on the Docker host:
 
 ```bash
-docker compose --env-file voicebox/.env -f voicebox/docker-compose.yml up -d --build
+docker compose --env-file voicebox/.env -f voicebox/docker-compose.yml -f voicebox/docker-compose.build.yml build
 ```
 
-4. Open the UI through Traefik:
+4. Start Voicebox:
+
+```bash
+docker compose --env-file voicebox/.env -f voicebox/docker-compose.yml up -d
+```
+
+5. Open the UI through Traefik:
 
 ```text
 https://voicebox.yourdomain.com
 ```
 
-5. Check the routed API through Traefik:
+6. Check the routed API through Traefik:
 
 ```bash
 curl -fsS https://voicebox.yourdomain.com/health
@@ -66,10 +72,10 @@ That preserves a long-context serving profile while creating materially more hea
 
 ## API / MCP
 
-Voicebox exposes REST and MCP on port `17493`:
+Voicebox exposes REST and MCP on the routed hostname:
 
 ```bash
-curl -X POST http://127.0.0.1:17493/speak \
+curl -X POST https://voicebox.yourdomain.com/speak \
   -H "Content-Type: application/json" \
   -H "X-Voicebox-Client-Id: hermes" \
   -d '{"text":"Deploy complete.","profile":"Morgan"}'
@@ -78,7 +84,7 @@ curl -X POST http://127.0.0.1:17493/speak \
 Documented MCP endpoint:
 
 ```text
-http://127.0.0.1:17493/mcp
+https://voicebox.yourdomain.com/mcp
 ```
 
 Tools include `voicebox.speak`, `voicebox.transcribe`, `voicebox.list_profiles`, and `voicebox.list_captures`.
