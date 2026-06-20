@@ -87,8 +87,10 @@ Each service is in its own directory with complete documentation:
 - **Uptime Kuma** (`uptimekuma/`) - Uptime monitoring
 - **Home Assistant** (`homeassistant/`) - Home automation platform
 - **Open WebUI** (`openwebui/`) - Chat interface for OpenAI-compatible local and remote models
-- **LiteLLM** (`litellm/`) - OpenAI-compatible model proxy for Open WebUI, LM Studio, and hosted APIs
+- **LiteLLM** (`litellm/`) - OpenAI-compatible model proxy for Open WebUI, LM Studio, vLLM, and hosted APIs
 - **Obsidian Web Desktop** (`obsidian/`) - Browser-accessible Obsidian desktop for a Syncthing-backed vault
+- **Voicebox** (`voicebox/`) - Local-first AI voice studio for voice cloning, TTS, dictation, REST, and MCP
+- **vLLM GB10 Qwen 3.6** (`vllm-gb10-qwen-3.6/`) - Specialized DGX Spark / GB10 serving stack for Qwen 3.6 with configurable memory/context knobs
 
 Each service includes:
 
