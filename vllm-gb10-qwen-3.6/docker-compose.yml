@@ -4,7 +4,6 @@ services:
     image: ${QWEN36_VLLM_IMAGE:-ghcr.io/aeon-7/vllm-spark-omni-q36:v1.2}
     container_name: stacksmith_vllm_gb10_qwen_3_6
     restart: unless-stopped
-    network_mode: host
     environment:
       VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
       TORCH_MATMUL_PRECISION: high
@@ -39,6 +38,15 @@ services:
           --speculative-config "$$VLLM_SPECULATIVE_CONFIG" \
           --attention-backend ${VLLM_ATTENTION_BACKEND:-flash_attn}
     ipc: host
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vllm-gb10-qwen-3-6.rule=Host(`${VLLM_HOSTNAME:?Set VLLM_HOSTNAME to the routed hostname}`)"
+      - "traefik.http.routers.vllm-gb10-qwen-3-6.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.vllm-gb10-qwen-3-6.tls.certresolver=stacksmith"
+      - "traefik.http.services.vllm-gb10-qwen-3-6.loadbalancer.server.port=8000"
+      - "traefik.http.routers.vllm-gb10-qwen-3-6.middlewares=secure-headers@docker"
     deploy:
       resources:
         reservations:
@@ -46,3 +54,7 @@ services:
             - driver: nvidia
               count: ${VLLM_NVIDIA_GPU_COUNT:-all}
               capabilities: [gpu]
+
+networks:
+  stacksmith:
+    external: true

@@ -10,14 +10,14 @@ This is intentionally **not** a generic vLLM template. It documents a hardware- 
 - Model files already exist under the required `${QWEN36_MODELS_DIR}` host path:
   - `qwen36-nvfp4` → mounted as `/models/qwen36`
   - `qwen36-dflash` → mounted as `/models/qwen36-dflash`
-- The service uses `network_mode: host` and exposes vLLM on `${VLLM_PORT}`.
+- The service joins the external `stacksmith` network and is routed by Traefik.
 - Defaults prioritize a large-context standalone vLLM server.
 
 ## Quick start
 
 ```bash
 cp vllm-gb10-qwen-3.6/.env.example vllm-gb10-qwen-3.6/.env
-# edit vllm-gb10-qwen-3.6/.env if changing memory/context
+# edit VLLM_HOSTNAME, QWEN36_MODELS_DIR, and memory/context settings
 
 docker compose --env-file vllm-gb10-qwen-3.6/.env -f vllm-gb10-qwen-3.6/docker-compose.yml up -d
 ```
