@@ -13,8 +13,8 @@ services:
       VLLM_TEST_FORCE_FP8_MARLIN: "1"
       VLLM_SPECULATIVE_CONFIG: ${VLLM_SPECULATIVE_CONFIG:-{"method":"dflash","model":"/models/qwen36-dflash","num_speculative_tokens":15}}
     volumes:
-      - ${QWEN36_MODELS_DIR:-/srv/qwen36}/qwen36-nvfp4:/models/qwen36:ro
-      - ${QWEN36_MODELS_DIR:-/srv/qwen36}/qwen36-dflash:/models/qwen36-dflash:ro
+      - ${QWEN36_MODELS_DIR:?Set QWEN36_MODELS_DIR to the host directory containing qwen36-nvfp4 and qwen36-dflash}/qwen36-nvfp4:/models/qwen36:ro
+      - ${QWEN36_MODELS_DIR:?Set QWEN36_MODELS_DIR to the host directory containing qwen36-nvfp4 and qwen36-dflash}/qwen36-dflash:/models/qwen36-dflash:ro
     command:
       - bash
       - -c

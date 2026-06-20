@@ -7,7 +7,7 @@ This is intentionally **not** a generic vLLM template. It documents a hardware- 
 ## What this stack assumes
 
 - Host: DGX Spark / GB10 with NVIDIA Container Toolkit.
-- Model files already exist under `${QWEN36_MODELS_DIR}`:
+- Model files already exist under the required `${QWEN36_MODELS_DIR}` host path:
   - `qwen36-nvfp4` → mounted as `/models/qwen36`
   - `qwen36-dflash` → mounted as `/models/qwen36-dflash`
 - The service uses `network_mode: host` and exposes vLLM on `${VLLM_PORT}`.
