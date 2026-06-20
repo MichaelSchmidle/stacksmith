@@ -7,7 +7,6 @@ services:
       LOG_LEVEL: ${VOICEBOX_LOG_LEVEL:-info}
       HF_HOME: /app/data/cache/huggingface
       HUGGINGFACE_HUB_CACHE: /app/data/cache/huggingface/hub
-      TRANSFORMERS_CACHE: /app/data/cache/huggingface/transformers
       XDG_CACHE_HOME: /app/data/cache
       NUMBA_CACHE_DIR: /tmp/numba_cache
       TZ: ${TZ:-Europe/Zurich}
