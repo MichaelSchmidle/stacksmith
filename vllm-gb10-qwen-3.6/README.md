@@ -45,9 +45,9 @@ If Voicebox still hits CUDA OOM during model load, lower further to `0.65` or re
 ## Validation
 
 ```bash
-curl -fsS http://127.0.0.1:${VLLM_PORT:-8000}/health
-curl -fsS http://127.0.0.1:${VLLM_PORT:-8000}/v1/models | python3 -m json.tool
-curl -fsS http://127.0.0.1:${VLLM_PORT:-8000}/v1/chat/completions \
+curl -fsS https://qwen.yourdomain.com/health
+curl -fsS https://qwen.yourdomain.com/v1/models | python3 -m json.tool
+curl -fsS https://qwen.yourdomain.com/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{"model":"qwen36-fast","messages":[{"role":"user","content":"What is 17 * 23? Answer with just the number."}],"max_tokens":64,"temperature":0,"chat_template_kwargs":{"enable_thinking":false}}'
 ```
@@ -59,3 +59,4 @@ Expected arithmetic answer: `391`.
 - `VLLM_SPECULATIVE_CONFIG` is passed through the container environment so JSON quoting survives Compose interpolation.
 - `VLLM_TEST_FORCE_FP8_MARLIN=1` is intentional for the current NVFP4 MoE path on this image.
 - Container name is fixed as `stacksmith_vllm_gb10_qwen_3_6` to match Stacksmith naming conventions.
+- vLLM listens on container port `8000`; Traefik routes to that fixed internal port.

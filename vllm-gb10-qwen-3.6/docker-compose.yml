@@ -20,7 +20,7 @@ services:
       - |
         exec vllm serve /models/qwen36 \
           --served-model-name ${QWEN36_SERVED_MODEL_NAMES:-qwen36-35b-heretic qwen36-fast qwen36-deep} \
-          --host ${VLLM_HOST:-0.0.0.0} --port ${VLLM_PORT:-8000} \
+          --host 0.0.0.0 --port 8000 \
           --tensor-parallel-size ${VLLM_TENSOR_PARALLEL_SIZE:-1} \
           --dtype ${VLLM_DTYPE:-auto} \
           --quantization ${VLLM_QUANTIZATION:-compressed-tensors} \
