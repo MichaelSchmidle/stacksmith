@@ -93,12 +93,11 @@ Tools include `voicebox.speak`, `voicebox.transcribe`, `voicebox.list_profiles`,
 
 | Volume | Container path | Purpose |
 |---|---|---|
-| `stacksmith_voicebox_data` | `/app/data` | Profiles, database, app data |
+| `stacksmith_voicebox_data` | `/app/data` | Profiles, database, app data, and model/cache files under `/app/data/cache` |
 | `stacksmith_voicebox_generations` | `/app/data/generations` | Generated audio files |
-| `stacksmith_voicebox_huggingface_cache` | `/home/voicebox/.cache/huggingface` | Model cache |
 
 ## Notes
 
 - First build can take several minutes because it builds the frontend and installs Python/TTS dependencies.
-- Model downloads are persisted in the HuggingFace cache volume.
+- Model downloads are persisted under `/app/data/cache/huggingface` in the main `stacksmith_voicebox_data` volume.
 - If CUDA out-of-memory errors appear, reduce the vLLM GPU reservation and/or Voicebox memory pressure before blaming Voicebox itself.

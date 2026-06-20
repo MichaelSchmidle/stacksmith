@@ -5,13 +5,16 @@ services:
     restart: unless-stopped
     environment:
       LOG_LEVEL: ${VOICEBOX_LOG_LEVEL:-info}
+      HF_HOME: /app/data/cache/huggingface
+      HUGGINGFACE_HUB_CACHE: /app/data/cache/huggingface/hub
+      TRANSFORMERS_CACHE: /app/data/cache/huggingface/transformers
+      XDG_CACHE_HOME: /app/data/cache
       NUMBA_CACHE_DIR: /tmp/numba_cache
       TZ: ${TZ:-Europe/Zurich}
       VOICEBOX_CORS_ORIGINS: ${VOICEBOX_CORS_ORIGINS:-}
     volumes:
       - voicebox-data:/app/data
       - voicebox-generations:/app/data/generations
-      - voicebox-huggingface-cache:/home/voicebox/.cache/huggingface
     networks:
       - stacksmith
     healthcheck:
@@ -47,8 +50,6 @@ volumes:
     name: stacksmith_voicebox_data
   voicebox-generations:
     name: stacksmith_voicebox_generations
-  voicebox-huggingface-cache:
-    name: stacksmith_voicebox_huggingface_cache
 
 networks:
   stacksmith:
