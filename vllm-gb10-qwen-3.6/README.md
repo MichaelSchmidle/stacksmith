@@ -58,4 +58,4 @@ Expected arithmetic answer: `391`.
 
 - `VLLM_SPECULATIVE_CONFIG` is passed through the container environment so JSON quoting survives Compose interpolation.
 - `VLLM_TEST_FORCE_FP8_MARLIN=1` is intentional for the current NVFP4 MoE path on this image.
-- `QWEN36_CONTAINER_NAME` defaults to `vllm-qwen36-heretic`; change it if that name conflicts with an existing deployment.
+- Container name is fixed as `stacksmith_vllm_gb10_qwen_3_6` to match Stacksmith naming conventions.

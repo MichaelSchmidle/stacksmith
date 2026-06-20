@@ -2,7 +2,7 @@
 services:
   vllm:
     image: ${QWEN36_VLLM_IMAGE:-ghcr.io/aeon-7/vllm-spark-omni-q36:v1.2}
-    container_name: ${QWEN36_CONTAINER_NAME:-vllm-qwen36-heretic}
+    container_name: stacksmith_vllm_gb10_qwen_3_6
     restart: unless-stopped
     network_mode: host
     environment:
