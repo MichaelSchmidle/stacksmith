@@ -69,7 +69,7 @@ docker compose -f traefik/docker-compose.yml -f service1/docker-compose.yml -f s
 PORTAINER_HOSTNAME=mgmt.example.com
 TRAEFIK_HOSTNAME=prxy.example.com
 TRAEFIK_TAILSCALE_IP=100.64.0.1
-TRAEFIK_SECONDARY_IP=127.0.0.1
+TRAEFIK_SECONDARY_IP=127.0.0.2
 
 # SSL Configuration
 ACME_EMAIL=your-email@example.com
@@ -231,6 +231,7 @@ cp servicename/.env.example servicename/.env
 
 # Update .env files:
 # - Set TRAEFIK_TAILSCALE_IP=127.0.0.1
+# - Set TRAEFIK_SECONDARY_IP to a distinct loopback IP, such as 127.0.0.2
 # - Use local domains (e.g., mgmt.dev.example.com)
 
 # Deploy and test

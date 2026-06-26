@@ -7,6 +7,7 @@ Reverse proxy with automatic HTTPS via Let's Encrypt and Cloudflare DNS challeng
 - **Service Discovery**: Automatic routing based on Docker labels
 - **Load Balancing**: Built-in load balancing
 - **Tailscale Integration**: Primary access via Tailscale VPN
+- **Host-local routing**: File-provider routes can proxy services bound to `127.0.0.1`
 
 ## Configuration
 
@@ -40,6 +41,20 @@ labels:
 ```
 
 **Tailscale entrypoint**: Services use `websecure-tailscale` for VPN access.
+
+## Host-local services
+
+Traefik runs with `network_mode: host` and binds directly to the configured host IPs. This allows file-provider routes to reach host-local services such as `http://127.0.0.1:11000` without adding a sidecar proxy.
+
+Use `traefik/dynamic/local-host-service.yml.example` as a starting point:
+
+```bash
+cp traefik/dynamic/local-host-service.yml.example traefik/dynamic/local-host-service.yml
+# Edit hostname and upstream URL for your deployment
+docker compose -f traefik/docker-compose.yml up -d
+```
+
+Keep deployment-specific hostnames and local-only upstreams in untracked dynamic files.
 
 ## Dashboard
 

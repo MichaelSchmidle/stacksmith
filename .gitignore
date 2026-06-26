@@ -7,3 +7,7 @@
 
 # Ignore local mkcert certificates
 traefik/certs/
+
+# Ignore deployment-specific dynamic Traefik routes; keep *.example templates tracked.
+traefik/dynamic/local-*.yml
+traefik/dynamic/local-*.yaml

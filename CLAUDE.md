@@ -69,18 +69,13 @@ services:
 
 ### Traefik Configuration
 ```yaml
-# Entrypoint Configuration (internal container ports)
-- --entrypoints.web-tailscale.address=:80
-- --entrypoints.websecure-tailscale.address=:443
-- --entrypoints.web-secondary.address=:8080
-- --entrypoints.websecure-secondary.address=:8443
+# Entrypoint Configuration (host-network binds)
+- --entrypoints.web-tailscale.address=${TRAEFIK_TAILSCALE_IP}:80
+- --entrypoints.websecure-tailscale.address=${TRAEFIK_TAILSCALE_IP}:443
+- --entrypoints.web-secondary.address=${TRAEFIK_SECONDARY_IP}:80
+- --entrypoints.websecure-secondary.address=${TRAEFIK_SECONDARY_IP}:443
 
-# Port Mappings (external_ip:external_port:internal_port)
-ports:
-  - "${TRAEFIK_TAILSCALE_IP}:80:80"
-  - "${TRAEFIK_TAILSCALE_IP}:443:443"
-  - "${TRAEFIK_SECONDARY_IP}:80:8080"
-  - "${TRAEFIK_SECONDARY_IP}:443:8443"
+network_mode: host
 ```
 
 ### SSL/TLS Management
@@ -100,7 +95,7 @@ ports:
 PORTAINER_HOSTNAME=mgmt.example.com
 TRAEFIK_HOSTNAME=prxy.example.com
 TRAEFIK_TAILSCALE_IP=100.64.0.1
-TRAEFIK_SECONDARY_IP=127.0.0.1
+TRAEFIK_SECONDARY_IP=127.0.0.2
 
 # SSL Configuration
 ACME_EMAIL=your-email@example.com

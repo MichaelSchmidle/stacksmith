@@ -11,10 +11,10 @@ services:
       - --providers.docker.network=stacksmith
       - --providers.file.directory=/dynamic
       - --providers.file.watch=true
-      - --entrypoints.web-tailscale.address=:80
-      - --entrypoints.websecure-tailscale.address=:443
-      - --entrypoints.web-secondary.address=:8080
-      - --entrypoints.websecure-secondary.address=:8443
+      - --entrypoints.web-tailscale.address=${TRAEFIK_TAILSCALE_IP}:80
+      - --entrypoints.websecure-tailscale.address=${TRAEFIK_TAILSCALE_IP}:443
+      - --entrypoints.web-secondary.address=${TRAEFIK_SECONDARY_IP}:80
+      - --entrypoints.websecure-secondary.address=${TRAEFIK_SECONDARY_IP}:443
       - --entrypoints.web-tailscale.http.redirections.entrypoint.to=websecure-tailscale
       - --entrypoints.web-tailscale.http.redirections.entrypoint.scheme=https
       - --entrypoints.web-secondary.http.redirections.entrypoint.to=websecure-secondary
@@ -23,11 +23,7 @@ services:
       - --certificatesresolvers.stacksmith.acme.dnschallenge.provider=cloudflare
       - --certificatesresolvers.stacksmith.acme.email=${ACME_EMAIL}
       - --certificatesresolvers.stacksmith.acme.storage=/letsencrypt/acme.json
-    ports:
-      - "${TRAEFIK_TAILSCALE_IP}:80:80"
-      - "${TRAEFIK_TAILSCALE_IP}:443:443"
-      - "${TRAEFIK_SECONDARY_IP}:80:8080"
-      - "${TRAEFIK_SECONDARY_IP}:443:8443"
+    network_mode: host
     environment:
       - CLOUDFLARE_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
     volumes:
@@ -35,10 +31,6 @@ services:
       - traefik-certificates:/letsencrypt
       - ./dynamic:/dynamic:ro
       - ./certs:/certs:ro
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - stacksmith
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik-dashboard.rule=Host(`${TRAEFIK_HOSTNAME}`)"
@@ -58,10 +50,5 @@ services:
       - "traefik.http.middlewares.secure-headers.headers.customRequestHeaders.X-Forwarded-Proto=https"
       - "traefik.http.middlewares.secure-headers.headers.customResponseHeaders.X-Robots-Tag=noindex, nofollow, nosnippet, noarchive"
       - "traefik.http.middlewares.secure-headers.headers.customResponseHeaders.Permissions-Policy=geolocation=(), microphone=(), camera=()"
-networks:
-  stacksmith:
-    name: stacksmith
-    external: true
-
 volumes:
   traefik-certificates:
