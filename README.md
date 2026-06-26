@@ -64,6 +64,8 @@ docker compose -f traefik/docker-compose.yml -f service1/docker-compose.yml -f s
 
 ### Core Environment Variables
 
+Traefik uses `network_mode: host` and binds directly to the configured host IPs on ports `80` and `443`. `TRAEFIK_TAILSCALE_IP` and `TRAEFIK_SECONDARY_IP` must be distinct addresses available on the host.
+
 ```bash
 # Core Infrastructure
 PORTAINER_HOSTNAME=mgmt.example.com
