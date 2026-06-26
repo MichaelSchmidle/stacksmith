@@ -38,6 +38,8 @@ services:
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=stacksmith"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
       - "traefik.http.routers.traefik-dashboard.middlewares=secure-headers@docker"
+      # Host-network containers need an explicit dummy port so Docker provider processes their labels.
+      - "traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080"
       # Define secure-headers middleware via Docker labels
       - "traefik.http.middlewares.secure-headers.headers.frameDeny=true"
       - "traefik.http.middlewares.secure-headers.headers.contentTypeNosniff=true"
