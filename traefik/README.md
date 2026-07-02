@@ -46,10 +46,17 @@ labels:
 
 Traefik runs with `network_mode: host` and binds directly to the configured host IPs. This allows file-provider routes to reach host-local services such as `http://127.0.0.1:11000` without adding a sidecar proxy.
 
+By default, Traefik reads dynamic file-provider config from `traefik/dynamic`. For Portainer-managed deployments, set `TRAEFIK_DYNAMIC_CONFIG_DIR` to a stable host path such as `/opt/stacksmith/traefik/dynamic` so routes survive Portainer stack deletion/recreation instead of living only under Portainer's internal `/data/compose/<id>` directory.
+
 Use `traefik/dynamic/local-host-service.yml.example` as a starting point:
 
 ```bash
+# Default cloned-repo deployment
 cp traefik/dynamic/local-host-service.yml.example traefik/dynamic/local-host-service.yml
+
+# Portainer/stable-host-path deployment: copy to the path configured as TRAEFIK_DYNAMIC_CONFIG_DIR.
+# Example: /opt/stacksmith/traefik/dynamic/local-host-service.yml
+
 # Edit hostname and upstream URL for your deployment
 docker compose -f traefik/docker-compose.yml up -d
 ```

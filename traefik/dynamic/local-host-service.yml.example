@@ -1,7 +1,7 @@
 # Example file-provider route for a service bound to the Docker host loopback.
 #
 # To use:
-# 1. Copy this file to traefik/dynamic/local-host-service.yml.
+# 1. Copy this file to ${TRAEFIK_DYNAMIC_CONFIG_DIR:-traefik/dynamic}/local-host-service.yml.
 # 2. Replace the hostname and upstream URL.
 # 3. Restart Traefik or keep providers.file.watch=true for live reload.
 #

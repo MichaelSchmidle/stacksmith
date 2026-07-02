@@ -29,7 +29,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-certificates:/letsencrypt
-      - ./dynamic:/dynamic:ro
+      - ${TRAEFIK_DYNAMIC_CONFIG_DIR:-./dynamic}:/dynamic:ro
       - ./certs:/certs:ro
     labels:
       - "traefik.enable=true"
