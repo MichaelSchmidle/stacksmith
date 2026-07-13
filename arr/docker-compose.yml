@@ -106,23 +106,6 @@ services:
       - sonarr
       - radarr
 
-  qbit-manage:
-    image: bobokun/qbit_manage:latest
-    container_name: stacksmith_qbit-manage
-    restart: unless-stopped
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    volumes:
-      - qbit-manage-config:/config
-      - ./qbit-manage-config.yml:/config/config.yml:ro
-      - ${DOWNLOADS_PATH}:/downloads
-    networks:
-      - stacksmith
-    depends_on:
-      - qbittorrent
-
 networks:
   stacksmith:
     external: true
@@ -133,4 +116,3 @@ volumes:
   prowlarr-config:
   qbittorrent-config:
   recyclarr-config:
-  qbit-manage-config:
