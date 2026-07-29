@@ -13,8 +13,8 @@ services:
     volumes:
       - ${QWEN36_MODELS_DIR:?Set QWEN36_MODELS_DIR to the host directory containing qwen36-nvfp4 and qwen36-dflash}/qwen36-nvfp4:/models/qwen36:ro
       - ${QWEN36_MODELS_DIR:?Set QWEN36_MODELS_DIR to the host directory containing qwen36-nvfp4 and qwen36-dflash}/qwen36-dflash:/models/qwen36-dflash:ro
+    # The AEON image already declares ENTRYPOINT ["/bin/bash"].
     command:
-      - bash
       - -c
       - |
         exec vllm serve /models/qwen36 \
