@@ -44,6 +44,55 @@ services:
       - "traefik.http.services.voicebox.loadbalancer.server.port=17493"
       - "traefik.http.routers.voicebox.middlewares=secure-headers@docker"
 
+  voicebox-openai-adapter:
+    image: ${VOICEBOX_ADAPTER_IMAGE:-ghcr.io/michaelschmidle/voicebox-openai-adapter:0.1.0@sha256:2cfcc073be8febf62143972fbe7a6b1a1a56a77766ce4385897f598fc9f68eef}
+    container_name: stacksmith_voicebox_openai_adapter
+    restart: unless-stopped
+    depends_on:
+      voicebox:
+        condition: service_healthy
+    environment:
+      ADAPTER_API_KEY: ${VOICEBOX_ADAPTER_API_KEY:?Set VOICEBOX_ADAPTER_API_KEY to a long random secret}
+      VOICEBOX_BASE_URL: http://voicebox:17493
+      VOICEBOX_CLIENT_ID: ${VOICEBOX_ADAPTER_CLIENT_ID:-openai-adapter}
+      VOICEBOX_DEFAULT_ENGINE: ${VOICEBOX_ADAPTER_DEFAULT_ENGINE:-qwen}
+      VOICEBOX_ALLOWED_ENGINES: ${VOICEBOX_ADAPTER_ALLOWED_ENGINES:-qwen,qwen_custom_voice,luxtts,chatterbox,chatterbox_turbo,tada,kokoro}
+      VOICEBOX_REQUEST_TIMEOUT_SECONDS: ${VOICEBOX_ADAPTER_REQUEST_TIMEOUT_SECONDS:-600}
+      VOICEBOX_HEALTH_TIMEOUT_SECONDS: ${VOICEBOX_ADAPTER_HEALTH_TIMEOUT_SECONDS:-5}
+      MAX_INPUT_CHARS: ${VOICEBOX_ADAPTER_MAX_INPUT_CHARS:-4096}
+      MAX_AUDIO_BYTES: ${VOICEBOX_ADAPTER_MAX_AUDIO_BYTES:-104857600}
+      FFMPEG_TIMEOUT_SECONDS: ${VOICEBOX_ADAPTER_FFMPEG_TIMEOUT_SECONDS:-120}
+      LOG_LEVEL: ${VOICEBOX_ADAPTER_LOG_LEVEL:-INFO}
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m,uid=10001,gid=10001
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - stacksmith
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2).read()
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.voicebox-openai-adapter.rule=Host(`${VOICEBOX_HOSTNAME:?Set VOICEBOX_HOSTNAME to the routed hostname}`) && PathPrefix(`/v1/audio/`)"
+      - "traefik.http.routers.voicebox-openai-adapter.priority=100"
+      - "traefik.http.routers.voicebox-openai-adapter.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.voicebox-openai-adapter.tls.certresolver=stacksmith"
+      - "traefik.http.routers.voicebox-openai-adapter.middlewares=secure-headers@docker"
+      - "traefik.http.routers.voicebox-openai-adapter.service=voicebox-openai-adapter"
+      - "traefik.http.services.voicebox-openai-adapter.loadbalancer.server.port=8000"
+
 volumes:
   voicebox-data:
     name: stacksmith_voicebox_data
