@@ -58,7 +58,7 @@ cp buzz/.env.example buzz/.env
 
 Replace every `CHANGE_ME` value and set `BUZZ_HOSTNAME` to a private hostname routed to the Stacksmith Traefik instance. Do not commit `buzz/.env`.
 
-The image is pinned to an immutable digest from upstream `main` because the current stable relay release predates the agent collaboration features being evaluated. Update it deliberately; do not replace it with a floating tag for unattended deployment.
+The pilot image is upstream commit `96ae141` (`sha-96ae141`) pinned to its immutable multi-architecture digest. Upstream publishes relay images from `main`/`sha-*`; GitHub's semver releases currently describe Desktop releases rather than a corresponding relay image. Update the commit and digest deliberately; do not use a floating tag for unattended deployment.
 
 ### 3. Validate and deploy
 
@@ -67,6 +67,18 @@ docker compose --env-file buzz/.env -f buzz/docker-compose.yml config
 docker compose --env-file buzz/.env -f buzz/docker-compose.yml up -d
 docker compose --env-file buzz/.env -f buzz/docker-compose.yml ps
 ```
+
+The owner configured by `BUZZ_RELAY_OWNER_PUBKEY` is bootstrapped automatically. Enroll every additional human and each agent's distinct Nostr public key before enabling their clients:
+
+```bash
+docker compose --env-file buzz/.env -f buzz/docker-compose.yml exec buzz-relay \
+  buzz-admin add-member --pubkey <NPUB_OR_HEX_PUBKEY> --role member
+
+docker compose --env-file buzz/.env -f buzz/docker-compose.yml exec buzz-relay \
+  buzz-admin list-members
+```
+
+Hermes agents must each use a separate Buzz private key whose corresponding public key is enrolled above. Prefer the owner-controlled invite/NIP-OA flow once validated; `buzz-admin add-member` is the explicit operator bootstrap path.
 
 Connect Buzz Desktop to `wss://<BUZZ_HOSTNAME>`. The HTTPS hostname serves Buzz's invite landing surface, not the full channel workspace or the optional Git repository browser.
 
@@ -88,10 +100,12 @@ For an existing Hermes deployment, prefer Hermes' native Buzz gateway adapter ov
 |---|---|
 | `stacksmith_buzz_postgres_data` | Events, memberships, search, workflow state, and metadata |
 | `stacksmith_buzz_redis_data` | Redis persistence and coordination state |
-| `stacksmith_buzz_minio_data` | Uploaded media and artifacts |
-| `stacksmith_buzz_git_data` | Buzz-hosted Git repositories |
+| `stacksmith_buzz_minio_data` | Uploaded media, artifacts, and content-addressed Git objects |
+| `stacksmith_buzz_git_data` | Local Git repositories, worktrees, and cache state |
 
-Back up all four volumes together with the `.env` secrets. Postgres should be captured with an application-consistent database dump; copying a live database volume alone is not a reliable backup strategy.
+Back up all four volumes together with the `.env` secrets and the owner's encrypted `nsec` backup held outside the stack. The public owner key in `.env` cannot recover ownership by itself.
+
+Capture Postgres with an application-consistent database dump. Take the remaining state during a quiesced maintenance window or with coordinated snapshots; copying unrelated live volumes independently is not a reliable backup. Periodically test a full restore, including owner login, memberships, media, and Git data.
 
 ## Update
 
