@@ -16,7 +16,8 @@ services:
       BUZZ_S3_BUCKET: ${BUZZ_S3_BUCKET:-buzz-media}
       BUZZ_MEDIA_BASE_URL: https://${BUZZ_HOSTNAME:?Set BUZZ_HOSTNAME to the routed hostname}/media
       BUZZ_MEDIA_SERVER_DOMAIN: ${BUZZ_HOSTNAME}
-      BUZZ_CORS_ORIGINS: https://${BUZZ_HOSTNAME}
+      # Buzz Desktop uses platform-dependent Tauri origins; keep this allowlist exact.
+      BUZZ_CORS_ORIGINS: https://${BUZZ_HOSTNAME:?Set BUZZ_HOSTNAME},tauri://localhost,http://tauri.localhost
       RELAY_URL: wss://${BUZZ_HOSTNAME}
       BUZZ_GIT_REPO_PATH: /data/git
       BUZZ_AUTO_MIGRATE: ${BUZZ_AUTO_MIGRATE:-true}

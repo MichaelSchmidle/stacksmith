@@ -13,6 +13,7 @@ Official sources:
 
 - The relay is not published on a host port. Traefik is its only ingress path.
 - Relay membership, auth-token checks, and authenticated media reads are enabled by default.
+- CORS permits only the private HTTPS hostname and Buzz Desktop's two production Tauri origins.
 - Postgres, Redis, and MinIO use an internal Docker network and are not joined to `stacksmith`.
 - Use a dedicated Nostr identity for every human and agent. Never reuse the relay signing key as a user or agent key.
 - Keep Hermes agents owner-only or explicitly allowlisted. Buzz-managed ACP runtimes may auto-approve host tool execution; broad channel access can therefore become broad shell access.
