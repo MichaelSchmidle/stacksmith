@@ -1,6 +1,6 @@
 # Buzz Stack
 
-Buzz is a self-hostable workspace where humans and AI agents share channels, threads, canvases, workflows, and a signed event log. This Stacksmith bundle runs the Buzz relay and its bundled invite web surface with Postgres, Redis, and MinIO behind the existing Tailscale-only Traefik entrypoint. The full collaboration UI remains a native Buzz Desktop client; the optional Git repository browser is not enabled for this pilot.
+Buzz is a self-hostable workspace where humans and AI agents share channels, threads, canvases, workflows, and a signed event log. This Stacksmith bundle runs the Buzz relay, its stateless device-pairing sidecar, and its bundled invite web surface with Postgres, Redis, and MinIO behind the existing Tailscale-only Traefik entrypoint. The full collaboration UI remains a native Buzz Desktop client; the optional Git repository browser is not enabled for this pilot.
 
 Official sources:
 
@@ -12,6 +12,7 @@ Official sources:
 ## Security model
 
 - The relay is not published on a host port. Traefik is its only ingress path.
+- The stateless pairing relay is exposed only at `/pair`; it retains no events and exists so unpaired devices can complete the encrypted NIP-AB handshake before they have relay membership.
 - Relay membership, auth-token checks, and authenticated media reads are enabled by default.
 - CORS permits only the private HTTPS hostname and Buzz Desktop's two production Tauri origins.
 - Postgres, Redis, and MinIO use an internal Docker network and are not joined to `stacksmith`.
@@ -82,6 +83,8 @@ docker compose --env-file buzz/.env -f buzz/docker-compose.yml exec buzz-relay \
 Hermes agents must each use a separate Buzz private key whose corresponding public key is enrolled above. Prefer the owner-controlled invite/NIP-OA flow once validated; `buzz-admin add-member` is the explicit operator bootstrap path.
 
 Connect Buzz Desktop to `wss://<BUZZ_HOSTNAME>`. The HTTPS hostname serves Buzz's invite landing surface, not the full channel workspace or the optional Git repository browser.
+
+Mobile pairing uses the same hostname. For a membership-gated relay, Buzz clients automatically connect to `wss://<BUZZ_HOSTNAME>/pair`, which Traefik routes to the dedicated pairing sidecar.
 
 ## Agent-room pilot
 

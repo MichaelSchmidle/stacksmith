@@ -65,6 +65,37 @@ services:
       - "traefik.http.routers.buzz.middlewares=secure-headers@docker"
       - "traefik.http.services.buzz.loadbalancer.server.port=3000"
 
+  buzz-pair-relay:
+    image: ${BUZZ_IMAGE:?Set BUZZ_IMAGE to a pinned Buzz relay image}
+    container_name: stacksmith_buzz_pair_relay
+    restart: unless-stopped
+    entrypoint: ["/usr/local/bin/buzz-pair-relay"]
+    environment:
+      BUZZ_PAIR_RELAY_BIND_ADDR: 0.0.0.0:5000
+      TZ: ${TZ:-Europe/Zurich}
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - bash -ec 'exec 3<>/dev/tcp/127.0.0.1/5000'
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=stacksmith"
+      - "traefik.http.routers.buzz-pair.rule=Host(`${BUZZ_HOSTNAME}`) && Path(`/pair`)"
+      - "traefik.http.routers.buzz-pair.priority=100"
+      - "traefik.http.routers.buzz-pair.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.buzz-pair.tls.certresolver=stacksmith"
+      - "traefik.http.routers.buzz-pair.middlewares=secure-headers@docker"
+      - "traefik.http.services.buzz-pair.loadbalancer.server.port=5000"
+
   buzz-postgres:
     image: postgres:17-alpine
     container_name: stacksmith_buzz_postgres
