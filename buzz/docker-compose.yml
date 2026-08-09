@@ -1,0 +1,194 @@
+services:
+  buzz-relay:
+    image: ${BUZZ_IMAGE:?Set BUZZ_IMAGE to a pinned Buzz relay image}
+    container_name: stacksmith_buzz_relay
+    restart: unless-stopped
+    environment:
+      BUZZ_BIND_ADDR: 0.0.0.0:3000
+      BUZZ_HEALTH_PORT: "8080"
+      BUZZ_METRICS_PORT: "9102"
+      DATABASE_URL: postgres://${BUZZ_POSTGRES_USER:-buzz}:${BUZZ_POSTGRES_PASSWORD:?Set BUZZ_POSTGRES_PASSWORD}@buzz-postgres:5432/${BUZZ_POSTGRES_DB:-buzz}
+      REDIS_URL: redis://:${BUZZ_REDIS_PASSWORD:?Set BUZZ_REDIS_PASSWORD}@buzz-redis:6379
+      BUZZ_S3_ENDPOINT: http://buzz-minio:9000
+      BUZZ_S3_ADDRESSING_STYLE: path
+      BUZZ_S3_ACCESS_KEY: ${BUZZ_S3_ACCESS_KEY:?Set BUZZ_S3_ACCESS_KEY}
+      BUZZ_S3_SECRET_KEY: ${BUZZ_S3_SECRET_KEY:?Set BUZZ_S3_SECRET_KEY}
+      BUZZ_S3_BUCKET: ${BUZZ_S3_BUCKET:-buzz-media}
+      BUZZ_MEDIA_BASE_URL: https://${BUZZ_HOSTNAME:?Set BUZZ_HOSTNAME to the routed hostname}/media
+      BUZZ_MEDIA_SERVER_DOMAIN: ${BUZZ_HOSTNAME}
+      # Buzz Desktop uses platform-dependent Tauri origins; keep this allowlist exact.
+      BUZZ_CORS_ORIGINS: https://${BUZZ_HOSTNAME:?Set BUZZ_HOSTNAME},tauri://localhost,http://tauri.localhost
+      RELAY_URL: wss://${BUZZ_HOSTNAME}
+      BUZZ_GIT_REPO_PATH: /data/git
+      BUZZ_AUTO_MIGRATE: ${BUZZ_AUTO_MIGRATE:-true}
+      BUZZ_GIT_CONFORMANCE_PROBE: ${BUZZ_GIT_CONFORMANCE_PROBE:-true}
+      BUZZ_REQUIRE_AUTH_TOKEN: ${BUZZ_REQUIRE_AUTH_TOKEN:-true}
+      BUZZ_REQUIRE_RELAY_MEMBERSHIP: ${BUZZ_REQUIRE_RELAY_MEMBERSHIP:-true}
+      BUZZ_REQUIRE_MEDIA_GET_AUTH: ${BUZZ_REQUIRE_MEDIA_GET_AUTH:-true}
+      BUZZ_ALLOW_NIP_OA_AUTH: ${BUZZ_ALLOW_NIP_OA_AUTH:-true}
+      RELAY_OWNER_PUBKEY: ${BUZZ_RELAY_OWNER_PUBKEY:?Set BUZZ_RELAY_OWNER_PUBKEY to the owner's 64-character hex public key}
+      BUZZ_RELAY_PRIVATE_KEY: ${BUZZ_RELAY_PRIVATE_KEY:?Set BUZZ_RELAY_PRIVATE_KEY to a dedicated 64-character hex private key}
+      BUZZ_GIT_HOOK_HMAC_SECRET: ${BUZZ_GIT_HOOK_HMAC_SECRET:?Set BUZZ_GIT_HOOK_HMAC_SECRET to a long random hex secret}
+      RUST_LOG: ${BUZZ_LOG_LEVEL:-buzz_relay=info,buzz_db=info,buzz_auth=info,buzz_pubsub=info,tower_http=info}
+      TZ: ${TZ:-Europe/Zurich}
+    volumes:
+      - buzz-git-data:/data/git
+    depends_on:
+      buzz-postgres:
+        condition: service_healthy
+      buzz-redis:
+        condition: service_healthy
+      buzz-minio:
+        condition: service_healthy
+      buzz-minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          bash -ec 'exec 3<>/dev/tcp/127.0.0.1/8080;
+          printf "GET /_readiness HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n" >&3;
+          grep -q "200 OK" <&3'
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+    networks:
+      - buzz-internal
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=stacksmith"
+      - "traefik.http.routers.buzz.rule=Host(`${BUZZ_HOSTNAME}`)"
+      - "traefik.http.routers.buzz.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.buzz.tls.certresolver=stacksmith"
+      - "traefik.http.routers.buzz.middlewares=secure-headers@docker"
+      - "traefik.http.services.buzz.loadbalancer.server.port=3000"
+
+  buzz-pair-relay:
+    image: ${BUZZ_IMAGE:?Set BUZZ_IMAGE to a pinned Buzz relay image}
+    container_name: stacksmith_buzz_pair_relay
+    restart: unless-stopped
+    entrypoint: ["/usr/local/bin/buzz-pair-relay"]
+    environment:
+      BUZZ_PAIR_RELAY_BIND_ADDR: 0.0.0.0:5000
+      TZ: ${TZ:-Europe/Zurich}
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - bash -ec 'exec 3<>/dev/tcp/127.0.0.1/5000'
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=stacksmith"
+      - "traefik.http.routers.buzz-pair.rule=Host(`${BUZZ_HOSTNAME}`) && Path(`/pair`)"
+      - "traefik.http.routers.buzz-pair.priority=100"
+      - "traefik.http.routers.buzz-pair.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.buzz-pair.tls.certresolver=stacksmith"
+      - "traefik.http.routers.buzz-pair.middlewares=secure-headers@docker"
+      - "traefik.http.services.buzz-pair.loadbalancer.server.port=5000"
+
+  buzz-postgres:
+    image: postgres:17-alpine
+    container_name: stacksmith_buzz_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${BUZZ_POSTGRES_DB:-buzz}
+      POSTGRES_USER: ${BUZZ_POSTGRES_USER:-buzz}
+      POSTGRES_PASSWORD: ${BUZZ_POSTGRES_PASSWORD:?Set BUZZ_POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: ${TZ:-Europe/Zurich}
+    volumes:
+      - buzz-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - buzz-internal
+
+  buzz-redis:
+    image: redis:7-alpine
+    container_name: stacksmith_buzz_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${BUZZ_REDIS_PASSWORD:?Set BUZZ_REDIS_PASSWORD}"]
+    environment:
+      REDIS_PASSWORD: ${BUZZ_REDIS_PASSWORD:?Set BUZZ_REDIS_PASSWORD}
+      TZ: ${TZ:-Europe/Zurich}
+    volumes:
+      - buzz-redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+    networks:
+      - buzz-internal
+
+  buzz-minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: stacksmith_buzz_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${BUZZ_S3_ACCESS_KEY:?Set BUZZ_S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${BUZZ_S3_SECRET_KEY:?Set BUZZ_S3_SECRET_KEY}
+      TZ: ${TZ:-Europe/Zurich}
+    volumes:
+      - buzz-minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - buzz-internal
+
+  buzz-minio-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    container_name: stacksmith_buzz_minio_init
+    depends_on:
+      buzz-minio:
+        condition: service_healthy
+    environment:
+      BUZZ_S3_ACCESS_KEY: ${BUZZ_S3_ACCESS_KEY:?Set BUZZ_S3_ACCESS_KEY}
+      BUZZ_S3_SECRET_KEY: ${BUZZ_S3_SECRET_KEY:?Set BUZZ_S3_SECRET_KEY}
+      BUZZ_S3_BUCKET: ${BUZZ_S3_BUCKET:-buzz-media}
+    entrypoint: >
+      /bin/sh -euc '
+        mc alias set local http://buzz-minio:9000 "$${BUZZ_S3_ACCESS_KEY}" "$${BUZZ_S3_SECRET_KEY}"
+        mc mb --ignore-existing "local/$${BUZZ_S3_BUCKET}"
+        mc anonymous set none "local/$${BUZZ_S3_BUCKET}"
+      '
+    restart: "no"
+    networks:
+      - buzz-internal
+
+volumes:
+  buzz-postgres-data:
+    name: stacksmith_buzz_postgres_data
+  buzz-redis-data:
+    name: stacksmith_buzz_redis_data
+  buzz-minio-data:
+    name: stacksmith_buzz_minio_data
+  buzz-git-data:
+    name: stacksmith_buzz_git_data
+
+networks:
+  buzz-internal:
+    name: stacksmith_buzz_internal
+    internal: true
+  stacksmith:
+    external: true
