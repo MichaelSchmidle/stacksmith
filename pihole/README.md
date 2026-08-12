@@ -19,6 +19,11 @@ cp pihole/.env.example pihole/.env
 # Edit with your hostname, password, and host IP
 ```
 
+Set `FTLCONF_webserver_api_password` to a strong unique password. The mixed-case
+name is Pi-hole v6's canonical environment variable and must be written exactly
+as shown. An explicitly empty value disables web and API authentication; Compose
+therefore rejects an unset or empty value before deployment.
+
 ### Upstream DNS Options
 - **Standard**: Cloudflare (1.1.1.1), Quad9 (9.9.9.9)
 - **DNS-over-HTTPS**: Encrypted queries, better privacy
