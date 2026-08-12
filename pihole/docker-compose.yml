@@ -14,7 +14,7 @@ services:
     hostname: "${PIHOLE_WEB_HOSTNAME}"
     environment:
       TZ: "${TZ:-UTC}"
-      FTLCONF_webserver_api_password: "${PIHOLE_PASSWORD}"
+      FTLCONF_webserver_api_password: "${FTLCONF_webserver_api_password:?Set a strong Pi-hole web/API password}"
       FTLCONF_dns_listeningMode: "all"
       FTLCONF_dns_upstreams: "${PIHOLE_DNS_UPSTREAMS:-1.1.1.1;1.0.0.1;9.9.9.9;149.112.112.112}"
       FTLCONF_webserver_port: "${PIHOLE_WEB_PORT:-8080}"
