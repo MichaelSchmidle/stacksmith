@@ -1,3 +1,11 @@
+{#
+  Derived from RadixArk/Qwen3.8-27B-NVFP4 chat_template.jinja
+  revision 52d1adc5f38aa5ebf099c29ed7025ba34cfbb854.
+
+  Modified for agent-client compatibility:
+  - map OpenAI/Claude reasoning-effort aliases to Qwen's supported tiers;
+  - render mid-conversation system messages as system-reminder blocks.
+#}
 {%- set image_count = namespace(value=0) %}
 {%- set video_count = namespace(value=0) %}
 {%- macro render_content(content, do_vision_count, is_system_content=false) %}
