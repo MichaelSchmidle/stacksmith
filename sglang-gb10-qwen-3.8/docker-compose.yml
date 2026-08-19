@@ -1,0 +1,103 @@
+# Qwen3.8-27B NVFP4 + DSpark on DGX Spark / GB10
+services:
+  sglang:
+    image: ${QWEN38_SGLANG_IMAGE:-lmsysorg/sglang@sha256:febfb971c7352570fc445c466ebd6ffc9d896024958e544a60f2137fd85856b1}
+    container_name: stacksmith_sglang_gb10_qwen_3_8
+    restart: unless-stopped
+    mem_limit: ${SGLANG_CONTAINER_MEMORY:-100g}
+    memswap_limit: ${SGLANG_CONTAINER_MEMORY:-100g}
+    shm_size: ${SGLANG_SHM_SIZE:-16g}
+    cpuset: ${SGLANG_CPUSET:-5-9,15-19}
+    environment:
+      TORCHINDUCTOR_CACHE_DIR: /cache/inductor
+    volumes:
+      - ${QWEN38_MODELS_DIR:?Set QWEN38_MODELS_DIR to the host directory containing qwen38-nvfp4 and qwen38-dspark}/qwen38-nvfp4:/models/qwen38:ro
+      - ${QWEN38_MODELS_DIR:?Set QWEN38_MODELS_DIR to the host directory containing qwen38-nvfp4 and qwen38-dspark}/qwen38-dspark:/models/qwen38-dspark:ro
+      - ./chat-template-sglang.jinja:/config/chat-template-sglang.jinja:ro
+      - sglang-cache:/cache
+    command:
+      - python3
+      - -m
+      - sglang.launch_server
+      - --trust-remote-code
+      - --model-path
+      - /models/qwen38
+      - --tp-size
+      - "1"
+      - --served-model-name
+      - ${QWEN38_SERVED_MODEL_NAME:-qwen3.8-27b}
+      - --context-length
+      - "262144"
+      - --mem-fraction-static
+      - ${SGLANG_MEM_FRACTION_STATIC:-0.50}
+      - --attention-backend
+      - flashinfer
+      - --chunked-prefill-size
+      - ${SGLANG_CHUNKED_PREFILL_SIZE:-8192}
+      - --disable-prefill-cuda-graph
+      - --cuda-graph-max-bs
+      - "4"
+      - --speculative-algorithm
+      - DSPARK
+      - --speculative-draft-model-path
+      - /models/qwen38-dspark
+      - --speculative-dspark-block-size
+      - "7"
+      - --speculative-draft-model-quantization
+      - unquant
+      - --mamba-radix-cache-strategy
+      - extra_buffer_lazy
+      - --mamba-ssm-dtype
+      - bfloat16
+      - --max-mamba-cache-size
+      - ${SGLANG_MAX_MAMBA_CACHE_SIZE:-96}
+      - --max-running-requests
+      - ${SGLANG_MAX_RUNNING_REQUESTS:-8}
+      - --enable-torch-compile
+      - --torch-compile-max-bs
+      - "4"
+      - --num-continuous-decode-steps
+      - "2"
+      - --reasoning-parser
+      - qwen3
+      - --tool-call-parser
+      - qwen3_coder
+      - --chat-template
+      - /config/chat-template-sglang.jinja
+      - --api-key
+      - ${SGLANG_API_KEY:?Set SGLANG_API_KEY to a strong random Bearer token}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    ipc: host
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15m
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sglang-gb10-qwen-3-8.rule=Host(`${SGLANG_HOSTNAME:?Set SGLANG_HOSTNAME to the routed hostname}`)"
+      - "traefik.http.routers.sglang-gb10-qwen-3-8.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.sglang-gb10-qwen-3-8.tls.certresolver=stacksmith"
+      - "traefik.http.services.sglang-gb10-qwen-3-8.loadbalancer.server.port=8000"
+      - "traefik.http.routers.sglang-gb10-qwen-3-8.middlewares=secure-headers@docker"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${SGLANG_NVIDIA_GPU_COUNT:-all}
+              capabilities: [gpu]
+
+networks:
+  stacksmith:
+    external: true
+
+volumes:
+  sglang-cache:
+    name: stacksmith_sglang_gb10_qwen_3_8_cache
