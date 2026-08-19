@@ -94,6 +94,7 @@ Each service is in its own directory with complete documentation:
 - **Voicebox** (`voicebox/`) - Local-first AI voice studio for voice cloning, TTS, dictation, REST, and MCP
 - **Buzz** (`buzz/`) - Private human-and-agent collaboration workspace with signed channels, threads, and workflows
 - **vLLM GB10 Qwen 3.6** (`vllm-gb10-qwen-3.6/`) - Specialized DGX Spark / GB10 serving stack for Qwen 3.6 with configurable memory/context knobs
+- **SGLang GB10 Qwen 3.8** (`sglang-gb10-qwen-3.8/`) - Single-model DGX Spark / GB10 stack for Qwen 3.8 NVFP4 with DSpark and 262K native context
 
 Each service includes:
 
