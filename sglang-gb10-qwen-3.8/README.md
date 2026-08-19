@@ -21,6 +21,7 @@ The model's YaRN recipe can reach 1M tokens with MTP, but YaRN and DSpark are in
 - External Docker network `stacksmith` and a compatible Traefik deployment.
 - About 24 GB for the two checkpoints plus space for the 39 GB runtime image and compile cache.
 - The host reserved for this inference engine while it runs. Competing GPU or unified-memory workloads can cause OOMs or host instability.
+- An absolute host path for the patched chat template. Portainer may turn missing relative auxiliary files into directories, so the stack deliberately does not bind it from the Git working directory.
 
 ## Prepare pinned checkpoints
 
@@ -36,15 +37,20 @@ hf download RadixArk/Qwen3.8-27B-NVFP4 \
 hf download RadixArk/Qwen3.8-27B-DSpark \
   --revision 923ed3a8572615643f0137e424e4ce4edd7f1cda \
   --local-dir /srv/qwen38/qwen38-dspark
+
+sudo install -m 0644 \
+  sglang-gb10-qwen-3.8/chat-template-sglang.jinja \
+  /srv/qwen38/chat-template-sglang.jinja
 ```
 
-`chat-template-sglang.jinja` is the target checkpoint's pinned template with the community recipe's two agent-client compatibility changes: OpenAI/Claude reasoning-effort aliases and mid-conversation system reminders. It remains covered by the checkpoint's Apache-2.0 license in `LICENSE.chat-template`. Refresh and review both whenever the target checkpoint changes.
+`chat-template-sglang.jinja` is the target checkpoint's pinned template with the community recipe's two agent-client compatibility changes: OpenAI/Claude reasoning-effort aliases and mid-conversation system reminders. It remains covered by the checkpoint's Apache-2.0 license in `LICENSE.chat-template`. Copy it to the absolute host path configured by `QWEN38_CHAT_TEMPLATE_FILE`; refresh and review both whenever the target checkpoint changes.
 
 ## Deploy
 
 ```bash
 cp sglang-gb10-qwen-3.8/.env.example sglang-gb10-qwen-3.8/.env
-# Set SGLANG_HOSTNAME, QWEN38_MODELS_DIR, and a random SGLANG_API_KEY.
+# Set SGLANG_HOSTNAME, QWEN38_MODELS_DIR, QWEN38_CHAT_TEMPLATE_FILE,
+# and a random SGLANG_API_KEY.
 
 # Stop any competing inference stack first.
 docker compose --env-file vllm-gb10-qwen-3.6/.env \

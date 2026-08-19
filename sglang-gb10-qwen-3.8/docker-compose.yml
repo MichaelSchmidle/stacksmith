@@ -13,7 +13,7 @@ services:
     volumes:
       - ${QWEN38_MODELS_DIR:?Set QWEN38_MODELS_DIR to the host directory containing qwen38-nvfp4 and qwen38-dspark}/qwen38-nvfp4:/models/qwen38:ro
       - ${QWEN38_MODELS_DIR:?Set QWEN38_MODELS_DIR to the host directory containing qwen38-nvfp4 and qwen38-dspark}/qwen38-dspark:/models/qwen38-dspark:ro
-      - ./chat-template-sglang.jinja:/config/chat-template-sglang.jinja:ro
+      - ${QWEN38_CHAT_TEMPLATE_FILE:?Set QWEN38_CHAT_TEMPLATE_FILE to the host path of chat-template-sglang.jinja}:/config/chat-template-sglang.jinja:ro
       - sglang-cache:/cache
     command:
       - python3
