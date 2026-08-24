@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install static-analysis tools
+        run: |
+          python3 -m venv /tmp/stacksmith-ci-venv
+          /tmp/stacksmith-ci-venv/bin/pip install \
+            --disable-pip-version-check \
+            yamllint==1.38.0 \
+            jinja2==3.1.6
+          echo '/tmp/stacksmith-ci-venv/bin' >> "$GITHUB_PATH"
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends shellcheck
+
+      - name: Check changed lines for whitespace errors
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git diff --check "$BASE_SHA"...HEAD
+          else
+            git diff --check HEAD^ HEAD
+          fi
+
+      - name: Lint YAML
+        run: |
+          mapfile -t yaml_files < <(git ls-files '*.yml' '*.yaml')
+          yamllint \
+            -d '{extends: relaxed, rules: {line-length: disable, document-start: disable, truthy: disable}}' \
+            "${yaml_files[@]}"
+
+      - name: Check shell scripts
+        run: |
+          mapfile -t shell_files < <(git ls-files '*.sh' '*.bash')
+          if [ "${#shell_files[@]}" -eq 0 ]; then
+            echo "No tracked shell scripts"
+          else
+            shellcheck --severity=error "${shell_files[@]}"
+          fi
+
+      - name: Validate Compose and Qwen template behavior
+        run: python3 _tools/ci_validate.py
+
+      - name: Install Gitleaks
+        run: |
+          curl -fsSL \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            -o /tmp/gitleaks.tar.gz
+          echo '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gitleaks.tar.gz' \
+            | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+
+      - name: Scan Git history for secrets
+        run: /tmp/gitleaks git --redact --no-banner --verbose
