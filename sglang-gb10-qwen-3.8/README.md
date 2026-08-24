@@ -43,7 +43,7 @@ sudo install -m 0644 \
   /srv/qwen38/chat-template-sglang.jinja
 ```
 
-`chat-template-sglang.jinja` is the target checkpoint's pinned template with the community recipe's two agent-client compatibility changes: OpenAI/Claude reasoning-effort aliases and mid-conversation system reminders. It remains covered by the checkpoint's Apache-2.0 license in `LICENSE.chat-template`. Copy it to the absolute host path configured by `QWEN38_CHAT_TEMPLATE_FILE`; refresh and review both whenever the target checkpoint changes.
+`chat-template-sglang.jinja` is the target checkpoint's pinned template with two agent-client compatibility changes: OpenAI/Claude reasoning-effort aliases (`minimal` → `low`, `high` → `medium`, `max` → `xhigh`) and mid-conversation system reminders. Explicit Qwen tiers (`low`, `medium`, and `xhigh`) remain unchanged. It remains covered by the checkpoint's Apache-2.0 license in `LICENSE.chat-template`. Copy it to the absolute host path configured by `QWEN38_CHAT_TEMPLATE_FILE`; refresh and review both whenever the target checkpoint changes.
 
 ## Deploy
 

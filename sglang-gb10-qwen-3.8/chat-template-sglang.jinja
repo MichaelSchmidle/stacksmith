@@ -53,8 +53,10 @@
 {%- set reasoning_instructions = '' %}
 {%- if enable_thinking is undefined or enable_thinking is true %}
     {%- set resolved_reasoning_effort = reasoning_effort|default('xhigh') %}
-    {%- if resolved_reasoning_effort in ('max', 'high') %}
+    {%- if resolved_reasoning_effort == 'max' %}
         {%- set resolved_reasoning_effort = 'xhigh' %}
+    {%- elif resolved_reasoning_effort == 'high' %}
+        {%- set resolved_reasoning_effort = 'medium' %}
     {%- elif resolved_reasoning_effort == 'minimal' %}
         {%- set resolved_reasoning_effort = 'low' %}
     {%- endif %}
