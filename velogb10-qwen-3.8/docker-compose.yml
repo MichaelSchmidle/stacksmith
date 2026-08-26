@@ -1,0 +1,92 @@
+services:
+  velogb10:
+    image: ${VELOGB10_IMAGE_REPOSITORY:-stacksmith_velogb10_qwen_3_8}:${VELOGB10_VERSION:-0.5.0}
+    pull_policy: never
+    platform: linux/arm64
+    container_name: stacksmith_velogb10_qwen_3_8
+    restart: unless-stopped
+    init: true
+    read_only: true
+    user: "10001:10001"
+    mem_limit: ${VELOGB10_CONTAINER_MEMORY:-100g}
+    memswap_limit: ${VELOGB10_CONTAINER_MEMORY:-100g}
+    shm_size: ${VELOGB10_SHM_SIZE:-16g}
+    cpuset: ${VELOGB10_CPUSET:-5-9,15-19}
+    environment:
+      HOME: /cache
+      XDG_CACHE_HOME: /cache
+      TZ: ${TZ:-Europe/Zurich}
+    volumes:
+      - ${VELOGB10_MODELS_DIR:?Set VELOGB10_MODELS_DIR to the host directory containing qwen38-nvfp4-full and qwen38-dflash2}/qwen38-nvfp4-full:/models/qwen38:ro
+      - ${VELOGB10_MODELS_DIR:?Set VELOGB10_MODELS_DIR to the host directory containing qwen38-nvfp4-full and qwen38-dflash2}/qwen38-dflash2:/models/qwen38-dflash2:ro
+      - velogb10-cache:/cache
+      - velogb10-calibration:/opt/velogb10/mtp_calib
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=1g,uid=10001,gid=10001
+    command:
+      - --server
+      - --model-dir
+      - /models/qwen38
+      - --model-name
+      - ${VELOGB10_SERVED_MODEL_NAME:-qwen3.8-27b-velo}
+      - --port
+      - "9000"
+      - --max-seq-len
+      - ${VELOGB10_MAX_SEQ_LEN:-65536}
+      - --max-batch
+      - ${VELOGB10_MAX_BATCH:-1}
+      - --max-tokens
+      - ${VELOGB10_DEFAULT_MAX_TOKENS:-65536}
+      - --prefix-cache
+      - ${VELOGB10_PREFIX_CACHE:-on}
+      - --default-presence-penalty
+      - ${VELOGB10_PRESENCE_PENALTY:-1.5}
+      - --mtp=auto
+      - --spec-source
+      - dflash2-auto
+      - --draft-dir
+      - /models/qwen38-dflash2
+      - --reasoning-effort
+      - ${VELOGB10_REASONING_EFFORT:-medium}
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - http://127.0.0.1:9000/health
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10m
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${VELOGB10_NVIDIA_GPU_COUNT:-all}
+              capabilities: [gpu]
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.velogb10-qwen-3-8.rule=Host(`${VELOGB10_HOSTNAME:?Set VELOGB10_HOSTNAME to the routed hostname}`)"
+      - "traefik.http.routers.velogb10-qwen-3-8.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.velogb10-qwen-3-8.tls.certresolver=stacksmith"
+      - "traefik.http.routers.velogb10-qwen-3-8.middlewares=secure-headers@docker,velogb10-qwen-3-8-allowlist@docker"
+      - "traefik.http.middlewares.velogb10-qwen-3-8-allowlist.ipallowlist.sourcerange=${VELOGB10_ALLOWED_SOURCE_RANGES:?Set VELOGB10_ALLOWED_SOURCE_RANGES to trusted client CIDRs}"
+      - "traefik.http.services.velogb10-qwen-3-8.loadbalancer.server.port=9000"
+
+volumes:
+  velogb10-cache:
+    name: stacksmith_velogb10_qwen_3_8_cache
+  velogb10-calibration:
+    name: stacksmith_velogb10_qwen_3_8_calibration
+
+networks:
+  stacksmith:
+    external: true
