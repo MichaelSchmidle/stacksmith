@@ -1,6 +1,7 @@
 services:
   velogb10:
     image: ${VELOGB10_IMAGE_REPOSITORY:-stacksmith_velogb10_qwen_3_8}:${VELOGB10_VERSION:-0.5.0}
+    pull_policy: never
     platform: linux/arm64
     container_name: stacksmith_velogb10_qwen_3_8
     restart: unless-stopped

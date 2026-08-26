@@ -66,7 +66,26 @@ Both directories are mounted read-only. CUDA/runtime caches and Velo's MTP calib
 
 ## Build the local runtime image
 
-Upstream does not publish a container image. Build this small packaging layer once on the ARM64 GB10 host:
+Upstream does not publish a container image. The base Compose stack therefore uses `pull_policy: never`: Portainer must find the tagged image in the target Docker engine's local image store and will not try Docker Hub.
+
+After this stack is merged, build the packaging layer once on the ARM64 GB10 Docker host directly from the merged Stacksmith commit. This uses a transient remote Git build context and does not require a persistent second checkout:
+
+```bash
+STACKSMITH_REF=<merged-commit-sha>
+
+docker build \
+  --tag stacksmith_velogb10_qwen_3_8:0.5.0 \
+  "https://github.com/MichaelSchmidle/stacksmith.git#${STACKSMITH_REF}:velogb10-qwen-3.8"
+```
+
+Verify that the image exists on the same Docker engine Portainer will deploy to:
+
+```bash
+docker image inspect stacksmith_velogb10_qwen_3_8:0.5.0 \
+  --format 'architecture={{.Architecture}} revision={{index .Config.Labels "org.opencontainers.image.revision"}}'
+```
+
+For local development from an existing checkout, the build overlay remains available:
 
 ```bash
 cp velogb10-qwen-3.8/.env.example velogb10-qwen-3.8/.env
@@ -79,6 +98,8 @@ docker compose --env-file velogb10-qwen-3.8/.env \
 ```
 
 The Docker build verifies the upstream release archive and Apache-2.0 license checksums before producing the local image.
+
+Build each new Velo version before changing or redeploying the Portainer stack. If the local image is pruned, rebuild the same pinned version before redeployment.
 
 ## Start the canary
 
