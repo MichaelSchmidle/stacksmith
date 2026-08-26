@@ -48,6 +48,8 @@ Verify the rendered behavior before use. Until that is done, benchmark clients m
 
 This is a new hardware-specific engine. v0.5.0 only recently added vision and repaired OpenAI multipart/tool-call behavior. Treat it as a bounded canary, not an unattended production replacement.
 
+Keep `VELOGB10_DEFAULT_MAX_TOKENS` below `VELOGB10_MAX_SEQ_LEN`. In v0.5.0, a client that omits `max_tokens` inherits the server default; setting it equal to the context length leaves no room for speculative-decoding state and produces an empty `context_length_exceeded` response. The 8,192-token default leaves safe headroom for Open WebUI and Hermes requests.
+
 ## Prepare pinned checkpoints
 
 ```bash

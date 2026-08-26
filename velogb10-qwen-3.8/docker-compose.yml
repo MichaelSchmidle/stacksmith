@@ -36,7 +36,7 @@ services:
       - --max-batch
       - ${VELOGB10_MAX_BATCH:-1}
       - --max-tokens
-      - ${VELOGB10_DEFAULT_MAX_TOKENS:-65536}
+      - ${VELOGB10_DEFAULT_MAX_TOKENS:-8192}
       - --prefix-cache
       - ${VELOGB10_PREFIX_CACHE:-on}
       - --default-presence-penalty
