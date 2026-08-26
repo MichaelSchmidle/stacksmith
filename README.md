@@ -95,6 +95,7 @@ Each service is in its own directory with complete documentation:
 - **Buzz** (`buzz/`) - Private human-and-agent collaboration workspace with signed channels, threads, and workflows
 - **vLLM GB10 Qwen 3.6** (`vllm-gb10-qwen-3.6/`) - Specialized DGX Spark / GB10 serving stack for Qwen 3.6 with configurable memory/context knobs
 - **SGLang GB10 Qwen 3.8** (`sglang-gb10-qwen-3.8/`) - Single-model DGX Spark / GB10 stack for Qwen 3.8 NVFP4 with DSpark and 262K native context
+- **veloGB10 Qwen 3.8 Canary** (`velogb10-qwen-3.8/`) - Isolated DGX Spark / GB10 speed canary using the pinned veloGB10 release, NVFP4 target, and DFlash 2
 
 Each service includes:
 
