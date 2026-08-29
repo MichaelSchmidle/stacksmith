@@ -50,6 +50,8 @@ This is a new hardware-specific engine. v0.5.0 only recently added vision and re
 
 Keep `VELOGB10_DEFAULT_MAX_TOKENS` below `VELOGB10_MAX_SEQ_LEN`. In v0.5.0, a client that omits `max_tokens` inherits the server default; setting it equal to the context length leaves no room for speculative-decoding state and produces an empty `context_length_exceeded` response. The 8,192-token default leaves safe headroom for Open WebUI and Hermes requests.
 
+Client context metadata must match the **deployed** `VELOGB10_MAX_SEQ_LEN`, not the model's 262,144-token native context. Configure both the client's context window and output reservation; for the default stack those are 65,536 and 8,192 tokens. Otherwise a client may postpone history compression until after Velo's real limit. Near the limit, v0.5.0 can clamp `max_tokens` to the nominal remaining KV space without reserving the additional 16 speculative-decoding tokens, reject the request with zero output, and provoke fruitless continuation retries in clients that interpret `context_length_exceeded` as ordinary truncation.
+
 ## Prepare pinned checkpoints
 
 ```bash
