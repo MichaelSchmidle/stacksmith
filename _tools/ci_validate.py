@@ -117,9 +117,40 @@ def validate_qwen_reasoning_aliases() -> None:
     print(f"qwen aliases: {actual}: OK")
 
 
+def validate_velogb10_token_budget() -> None:
+    stack = ROOT / "velogb10-qwen-3.8"
+    compose = (stack / "docker-compose.yml").read_text()
+    env_values = {}
+    for line in (stack / ".env.example").read_text().splitlines():
+        if line and not line.startswith("#") and "=" in line:
+            key, value = line.split("=", 1)
+            env_values[key] = value
+
+    defaults = {}
+    for key in ("VELOGB10_MAX_SEQ_LEN", "VELOGB10_DEFAULT_MAX_TOKENS"):
+        match = re.search(rf"\$\{{{key}:-(\d+)\}}", compose)
+        if match is None:
+            raise AssertionError(f"missing numeric Compose default for {key}")
+        defaults[key] = int(match.group(1))
+        if env_values.get(key) != match.group(1):
+            raise AssertionError(f"{key} differs between Compose and .env.example")
+
+    speculative_margin = 16
+    default_output_tokens = defaults["VELOGB10_DEFAULT_MAX_TOKENS"]
+    minimum_prompt_tokens = default_output_tokens
+    required_tokens = default_output_tokens + minimum_prompt_tokens + speculative_margin
+    if required_tokens > defaults["VELOGB10_MAX_SEQ_LEN"]:
+        raise AssertionError(
+            "veloGB10 default generation cap must leave an equally sized prompt budget "
+            "plus the speculative-decoding margin"
+        )
+    print(f"velogb10 token budget: {defaults}: OK")
+
+
 def main() -> None:
     validate_all_compose()
     validate_qwen_reasoning_aliases()
+    validate_velogb10_token_budget()
 
 
 if __name__ == "__main__":
