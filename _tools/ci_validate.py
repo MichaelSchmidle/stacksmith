@@ -136,8 +136,14 @@ def validate_velogb10_token_budget() -> None:
             raise AssertionError(f"{key} differs between Compose and .env.example")
 
     speculative_margin = 16
-    if defaults["VELOGB10_DEFAULT_MAX_TOKENS"] + speculative_margin > defaults["VELOGB10_MAX_SEQ_LEN"]:
-        raise AssertionError("veloGB10 default generation cap leaves no speculative-decoding headroom")
+    default_output_tokens = defaults["VELOGB10_DEFAULT_MAX_TOKENS"]
+    minimum_prompt_tokens = default_output_tokens
+    required_tokens = default_output_tokens + minimum_prompt_tokens + speculative_margin
+    if required_tokens > defaults["VELOGB10_MAX_SEQ_LEN"]:
+        raise AssertionError(
+            "veloGB10 default generation cap must leave an equally sized prompt budget "
+            "plus the speculative-decoding margin"
+        )
     print(f"velogb10 token budget: {defaults}: OK")
 
 
