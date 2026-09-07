@@ -34,11 +34,11 @@ unset OWNER_SECRET_HEX
 
 Immediately store the displayed `nsec` in a password manager and import it through Buzz Desktop's **Use an existing key** flow. Put the displayed 64-character hex public key in `BUZZ_RELAY_OWNER_PUBKEY`.
 
-Generate a separate relay keypair using the pinned Buzz image:
+Generate a separate relay keypair using the default Buzz image (substitute your configured `BUZZ_IMAGE` if overridden):
 
 ```bash
 docker run --rm --entrypoint buzz-admin \
-  ghcr.io/block/buzz:sha-96ae141@sha256:472e9cf7cfee069198ea038a923ed63cbaea48954615f082d6c82149f5917975 \
+  ghcr.io/block/buzz:latest \
   generate-key
 ```
 
@@ -60,13 +60,17 @@ cp buzz/.env.example buzz/.env
 
 Replace every `CHANGE_ME` value and set `BUZZ_HOSTNAME` to a private hostname routed to the Stacksmith Traefik instance. Do not commit `buzz/.env`.
 
-The pilot image is upstream commit `96ae141` (`sha-96ae141`) pinned to its immutable multi-architecture digest. Upstream publishes relay images from `main`/`sha-*`; GitHub's semver releases currently describe Desktop releases rather than a corresponding relay image. Update the commit and digest deliberately; do not use a floating tag for unattended deployment.
+Both relay services default to `ghcr.io/block/buzz:latest` for experimental use where update breakage is acceptable. `BUZZ_IMAGE` overrides both together. Upstream's `latest` follows stable **relay** releases (`relay-v*`), not Desktop releases or every `main` commit; recently merged features may not yet be included.
+
+Existing deployments retain any `BUZZ_IMAGE` value stored in their `.env` or Portainer stack environment. Set that value to `ghcr.io/block/buzz:latest` (removing the old digest), or remove the override to use the Compose default. Updating this repository alone does not change a stored override or a running container.
+
+A floating tag is not an automatic updater: pull the image when deploying/updating, or explicitly enable image re-pulling in Portainer. If availability or data becomes important, switch `BUZZ_IMAGE` to a tested version or commit plus an immutable digest.
 
 ### 3. Validate and deploy
 
 ```bash
 docker compose --env-file buzz/.env -f buzz/docker-compose.yml config
-docker compose --env-file buzz/.env -f buzz/docker-compose.yml up -d
+docker compose --env-file buzz/.env -f buzz/docker-compose.yml up -d --pull always
 docker compose --env-file buzz/.env -f buzz/docker-compose.yml ps
 ```
 
@@ -113,9 +117,9 @@ Capture Postgres with an application-consistent database dump. Take the remainin
 
 ## Update
 
-1. Review Buzz release notes and changes under `deploy/compose/`.
-2. Resolve the desired relay image to an immutable multi-architecture digest.
-3. Update `BUZZ_IMAGE` in `.env.example` and the bootstrap command above.
-4. Validate Compose, back up the stack, pull, and redeploy.
+1. Review upstream relay changes and client compatibility; `latest` can lag `main`.
+2. Confirm the deployment's `BUZZ_IMAGE` is `ghcr.io/block/buzz:latest` for both relay services.
+3. Back up any state worth keeping, then validate Compose and redeploy with `up -d --pull always` (or Portainer's image re-pull option).
+4. Check relay readiness, owner login, message delivery, and device pairing.
 
-Buzz is pre-1.0 and changes quickly. Treat migrations and client/relay compatibility as release work, not routine unattended image refreshes.
+This default deliberately trades reproducibility for convenient updates in a breakage-tolerant experiment. No automatic update service is included. Database migrations remain enabled; reverting only the image may not reverse a migration. Revisit immutable pinning and tested restore procedures before depending on the service.

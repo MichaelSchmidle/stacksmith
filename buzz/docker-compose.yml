@@ -1,6 +1,6 @@
 services:
   buzz-relay:
-    image: ${BUZZ_IMAGE:?Set BUZZ_IMAGE to a pinned Buzz relay image}
+    image: ${BUZZ_IMAGE:-ghcr.io/block/buzz:latest}
     container_name: stacksmith_buzz_relay
     restart: unless-stopped
     environment:
@@ -66,7 +66,7 @@ services:
       - "traefik.http.services.buzz.loadbalancer.server.port=3000"
 
   buzz-pair-relay:
-    image: ${BUZZ_IMAGE:?Set BUZZ_IMAGE to a pinned Buzz relay image}
+    image: ${BUZZ_IMAGE:-ghcr.io/block/buzz:latest}
     container_name: stacksmith_buzz_pair_relay
     restart: unless-stopped
     entrypoint: ["/usr/local/bin/buzz-pair-relay"]
