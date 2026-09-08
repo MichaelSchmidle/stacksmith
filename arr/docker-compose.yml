@@ -93,7 +93,7 @@ services:
       - "traefik.http.routers.qbittorrent.middlewares=secure-headers@docker"
 
   recyclarr:
-    image: ghcr.io/recyclarr/recyclarr:latest
+    image: ghcr.io/recyclarr/recyclarr:8
     container_name: stacksmith_recyclarr
     restart: unless-stopped
     environment:
