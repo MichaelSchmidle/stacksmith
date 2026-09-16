@@ -90,6 +90,7 @@ Each service is in its own directory with complete documentation:
 - **Home Assistant** (`homeassistant/`) - Home automation platform
 - **Open WebUI** (`openwebui/`) - Chat interface for OpenAI-compatible local and remote models
 - **LiteLLM** (`litellm/`) - OpenAI-compatible model proxy for Open WebUI, LM Studio, vLLM, and hosted APIs
+- **Paperless-ngx** (`paperless/`) - Private document intake, German/English OCR and searchable archive with PostgreSQL and Redis
 - **Obsidian Web Desktop** (`obsidian/`) - Browser-accessible Obsidian desktop for a Syncthing-backed vault
 - **Voicebox** (`voicebox/`) - Local-first AI voice studio for voice cloning, TTS, dictation, REST, and MCP
 - **Buzz** (`buzz/`) - Private human-and-agent collaboration workspace with signed channels, threads, and workflows
