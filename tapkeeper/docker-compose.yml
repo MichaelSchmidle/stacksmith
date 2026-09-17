@@ -1,0 +1,41 @@
+services:
+  tapkeeper:
+    image: ${TAPKEEPER_IMAGE:?Set a published Tapkeeper image pinned by sha256 digest}
+    container_name: stacksmith_tapkeeper
+    user: "10001:10001"
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      TZ: ${TZ:-Europe/Zurich}
+      TAPKEEPER_TOKEN_FILE: /run/secrets/telegram_token
+    command: ["--config", "/config/config.json", "--db", "/data/tapkeeper.db", "run"]
+    volumes:
+      - type: bind
+        source: ${TAPKEEPER_CONFIG_FILE:?Set an existing absolute config file path}
+        target: /config/config.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${TAPKEEPER_TOKEN_FILE:?Set an existing absolute token file path}
+        target: /run/secrets/telegram_token
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${TAPKEEPER_DATA_DIR:?Set an existing absolute data directory}
+        target: /data
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m,mode=1777
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

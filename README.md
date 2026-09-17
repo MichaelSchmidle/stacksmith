@@ -82,6 +82,7 @@ CLOUDFLARE_DNS_API_TOKEN=your-cloudflare-api-token
 
 Each service is in its own directory with complete documentation:
 
+- **Tapkeeper** (`tapkeeper/`) - Single-owner Telegram watch-wear logger; outbound-only, no shared network required
 - **Pi-hole** (`pihole/`) - DNS server with ad-blocking
 - **Media Stack** (`arr/`) - Complete media automation suite
 - **n8n** (`n8n/`) - Workflow automation platform
