@@ -55,7 +55,7 @@ German + English OCR and `Europe/Zurich` are configured. OCR mode `skip` retains
 
 ### Later scanner intake
 
-Paperless is not an SMB/SFTP server. Connect a separately managed scanner drop folder to `PAPERLESS_CONSUME_DIR` later. A scanner writer needs suitable group/ACL permissions without access to media, database or exports. Prefer completed-file/atomic delivery. For SMB/NFS intake, set `PAPERLESS_CONSUMER_POLLING=10` (seconds) because filesystem notifications may not propagate; test slow multipage transfers before trusting it. Keep the database local regardless of intake location.
+Paperless is not an SMB/SFTP server. Connect a separately managed scanner drop folder to `PAPERLESS_CONSUME_DIR` later. A scanner writer needs suitable group/ACL permissions without access to media, database or exports. Prefer completed-file/atomic delivery. Polling defaults to 10 seconds (`PAPERLESS_CONSUMER_POLLING_INTERVAL=10`) so SMB/NFS intake works even when filesystem notifications do not propagate. Override it in `.env` or the Portainer stack environment; set `0` only for local intake with working filesystem events. This replaces the obsolete `PAPERLESS_CONSUMER_POLLING` variable, which this Paperless release ignores; rename any existing override and redeploy to apply it. Test slow multipage transfers before trusting intake. Keep the database local regardless of intake location.
 
 ## Storage and health
 
