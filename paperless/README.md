@@ -57,6 +57,28 @@ German + English OCR and `Europe/Zurich` are configured. OCR mode `skip` retains
 
 Paperless is not an SMB/SFTP server. Connect a separately managed scanner drop folder to `PAPERLESS_CONSUME_DIR` later. A scanner writer needs suitable group/ACL permissions without access to media, database or exports. Prefer completed-file/atomic delivery. Polling defaults to 10 seconds (`PAPERLESS_CONSUMER_POLLING_INTERVAL=10`) so SMB/NFS intake works even when filesystem notifications do not propagate. Override it in `.env` or the Portainer stack environment; set `0` only for local intake with working filesystem events. This replaces the obsolete `PAPERLESS_CONSUMER_POLLING` variable, which this Paperless release ignores; rename any existing override and redeploy to apply it. Test slow multipage transfers before trusting intake. Keep the database local regardless of intake location.
 
+### Managed filenames
+
+Set `PAPERLESS_FILENAME_FORMAT` in `.env` or Portainer's stack environment to
+customize the filenames Paperless manages. Leave it empty (the default) to retain
+Paperless's default naming. For document date, correspondent, type and document ID:
+
+```text
+{{ created }} {{ correspondent }} {{ document_type }} - {{ doc_pk }}
+```
+
+Paperless adds the file extension automatically. This does not change the document
+title displayed in the UI or its recorded original filename. Document-specific
+storage paths override the global format. Redeploy after changing the variable;
+to apply it to all existing documents, back up first, then run the native renamer:
+
+```bash
+docker compose --env-file .env exec -T paperless document_renamer
+```
+
+Do not manually rename or move files in the media volume. See the upstream
+[filename documentation](https://github.com/paperless-ngx/paperless-ngx/blob/v3.1.3/docs/advanced_usage.md#file-name-handling).
+
 ## Storage and health
 
 | Storage | Contents |
