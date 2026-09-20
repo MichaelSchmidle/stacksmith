@@ -51,7 +51,7 @@ In Portainer, use its interactive container console and run `python manage.py cr
 3. Start with browser uploads and a disposable, non-sensitive multipage scan. Check every page, OCR text, original download, document date and Inbox assignment. Remove Inbox only after reviewing completeness, metadata and any required action.
 4. Verify another user's access and HTTPS login/logout before real intake. Check that a non-tailnet client cannot reach the service.
 
-German + English OCR and `Europe/Zurich` are configured. OCR mode `skip` retains existing PDF text layers rather than redoing them; image-only scans are OCRed. Paperless retains original documents alongside derived archive files. Date/classification suggestions still need review; no filenames, taxonomy or deadline automation are imposed.
+German + English OCR and `Europe/Zurich` are configured. OCR mode `auto` retains existing PDF text layers rather than redoing them; image-only scans are OCRed. The former `skip` value is invalid in Paperless 3. Archive generation is separate and left at its default `auto`: born-digital documents may not need an additional archive PDF. Original documents are retained. Date/classification suggestions still need review; no filenames, taxonomy or deadline automation are imposed.
 
 ### Later scanner intake
 
