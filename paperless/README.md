@@ -1,6 +1,6 @@
 # Paperless-ngx
 
-Private document intake, OCR and retrieval with Paperless-ngx **3.1.3**, PostgreSQL **17.11** and Redis **8.2.9**. Release tags are pinned in Compose; review upgrades explicitly. No AI, calendar integration, archive migration, Tika/Gotenberg, scanner server or backup scheduler is included.
+Private document intake, OCR and retrieval with Paperless-ngx **latest**, PostgreSQL **17.11** and Redis **8.2.9**. Paperless follows the upstream rolling application tag. PostgreSQL and Redis retain their existing pins for backend compatibility; PostgreSQL major changes require a supported migration. No AI, calendar integration, archive migration, Tika/Gotenberg, scanner server or backup scheduler is included.
 
 ## Prerequisites and boundaries
 
@@ -116,7 +116,7 @@ docker compose --env-file .env exec -T --user paperless paperless mkdir "$BACKUP
 
 Check the command's exit status and export contents. The native export contains original/archive documents, thumbnails, metadata and database contents. **API tokens are excluded** and must be regenerated after restoration. Protect exports as highly sensitive, including account data.
 
-Copy successful exports with an external, scheduled backup tool to encrypted, versioned storage on an independent device **and** an independent off-site destination. Retain older successful generations; alert on failed/stale exports and failed copies. Also protect the Compose files/version pins, deployment environment and signing key, recovery credentials and any not-yet-consumed intake. A readable one-way PDF export or sync is not a substitute for the full recovery export. Never treat a tar of a running PostgreSQL volume as a consistent database backup.
+Copy successful exports with an external, scheduled backup tool to encrypted, versioned storage on an independent device **and** an independent off-site destination. Retain older successful generations; alert on failed/stale exports and failed copies. Also protect the Compose files, exact running image versions/digests, deployment environment and signing key, recovery credentials and any not-yet-consumed intake. A readable one-way PDF export or sync is not a substitute for the full recovery export. Never treat a tar of a running PostgreSQL volume as a consistent database backup.
 
 ### Isolated restore drill / recovery
 
@@ -135,13 +135,13 @@ Copy successful exports with an external, scheduled backup tool to encrypted, ve
 
 ### Upgrades
 
-Read upstream release/migration notes; export and independently copy a recovery generation **before** changing pins. Record the old Compose version and keep its secrets. Pull the reviewed images, redeploy, inspect logs/health, then test login, ingest, OCR, search and export. PostgreSQL major upgrades require an explicit supported migration, not simply changing its tag. Changing `PAPERLESS_DB_PASSWORD` on an initialized volume does not rotate the database role password automatically.
+The `latest` tag does not update a running container by itself: pull/recreate it explicitly (or through a separately configured updater). Export and independently copy a recovery generation **before** pulling/redeploying. Record the running Paperless version, image digest and Compose revision alongside that generation; `latest` alone cannot identify a matching recovery image. Keep deployment secrets separately protected. Check upstream migration notes when updating, redeploy, inspect logs/health, then test login, ingest, OCR, search and export. PostgreSQL major upgrades require an explicit supported migration, not simply changing its tag. Changing `PAPERLESS_DB_PASSWORD` on an initialized volume does not rotate the database role password automatically.
 
 If an upgrade migrates the schema, do not assume downgrading the image will undo it: restore the pre-upgrade export into fresh storage at its matching Paperless version, leaving the failed instance intact until recovery is verified.
 
 ## Upstream references
 
 - [Paperless-ngx installation](https://docs.paperless-ngx.com/setup/)
-- [Configuration for the pinned release](https://github.com/paperless-ngx/paperless-ngx/blob/v3.1.3/docs/configuration.md)
+- [Configuration reference (3.1.3 baseline)](https://github.com/paperless-ngx/paperless-ngx/blob/v3.1.3/docs/configuration.md)
 - [Recommended workflow and inbox](https://github.com/paperless-ngx/paperless-ngx/blob/v3.1.3/docs/usage.md#usage-recommended-workflow)
 - [Exporter, importer and backup caveats](https://github.com/paperless-ngx/paperless-ngx/blob/v3.1.3/docs/administration.md)
