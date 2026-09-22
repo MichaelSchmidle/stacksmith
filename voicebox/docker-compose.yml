@@ -1,6 +1,7 @@
 services:
   voicebox:
     image: ${VOICEBOX_IMAGE:-stacksmith_voicebox:latest}
+    pull_policy: never
     container_name: stacksmith_voicebox
     restart: unless-stopped
     environment:
@@ -45,7 +46,7 @@ services:
       - "traefik.http.routers.voicebox.middlewares=secure-headers@docker"
 
   voicebox-openai-adapter:
-    image: ${VOICEBOX_ADAPTER_IMAGE:-ghcr.io/michaelschmidle/voicebox-openai-adapter:0.1.0@sha256:2cfcc073be8febf62143972fbe7a6b1a1a56a77766ce4385897f598fc9f68eef}
+    image: ${VOICEBOX_ADAPTER_IMAGE:-ghcr.io/michaelschmidle/voicebox-openai-adapter:latest}
     container_name: stacksmith_voicebox_openai_adapter
     restart: unless-stopped
     depends_on:
