@@ -11,12 +11,13 @@ Official docs:
 
 ## What this stack assumes
 
-- Voicebox runs on a Docker host with the NVIDIA Container Toolkit installed when GPU acceleration is desired.
+- The default Voicebox image requires a Linux ARM64 host with an NVIDIA GPU, compatible CUDA 13 driver, and NVIDIA Container Toolkit. It is not an AMD64 image.
 - Browser/API access is routed through Traefik on the `stacksmith` network.
 - Voicebox listens on container port `17493`; Traefik routes to that fixed internal port.
 - Voicebox has no built-in authentication, so it should stay Tailscale/VPN-only or sit behind an auth middleware before broader exposure.
-- Upstream Docker currently builds from source; prebuilt GHCR images are documented as coming later, not available now.
-- Voicebox uses a locally built image with `pull_policy: never`; build or load it on the target Docker host before deploying. A registry-hosted `VOICEBOX_IMAGE` override must also be pulled explicitly before deployment.
+- Voicebox uses the prebuilt [voicebox-container](https://github.com/MichaelSchmidle/voicebox-container) ARM64 CUDA packaging, not an official upstream image. `VOICEBOX_IMAGE` defaults to `ghcr.io/michaelschmidle/voicebox-container:latest`; override it with a version/digest when reproducibility is required.
+- The default image runs as UID/GID `10001:10001`. Existing storage must be writable by that identity before deployment.
+- The base stack permits registry pulls; the optional source-build overlay retains `pull_policy: never` for local builds.
 - The adapter is a prebuilt multi-architecture image following `latest`, consistent with Stacksmith application-image policy. Portainer never builds adapter source. Override `VOICEBOX_ADAPTER_IMAGE` with a version/digest when reproducibility is required.
 - Only `/v1/audio/*` routes to the bearer-authenticated adapter. Existing Voicebox UI/API routes continue to target Voicebox.
 
@@ -38,10 +39,10 @@ VOICEBOX_NVIDIA_GPU_COUNT=1
 VOICEBOX_ADAPTER_API_KEY=replace-with-a-long-random-secret
 ```
 
-3. Build the image on the Docker host:
+3. For a fresh installation, pull both configured images on the Docker host (for an existing installation, first complete the update checks below):
 
 ```bash
-docker compose --env-file voicebox/.env -f voicebox/docker-compose.yml -f voicebox/docker-compose.build.yml build
+docker compose --env-file voicebox/.env -f voicebox/docker-compose.yml pull
 ```
 
 4. Start Voicebox:
@@ -65,23 +66,55 @@ curl -fsS https://voicebox.yourdomain.com/profiles
 
 ## Portainer Git stack updates
 
-Deploy `voicebox/docker-compose.yml` without the build override. Keep **Re-pull image**
-disabled for this mixed local/registry stack; forced pulling may override service policy
-depending on the Portainer version. Do not remove the local Voicebox image or data volumes.
+Deploy `voicebox/docker-compose.yml` without the build override. Both default images
+are registry-hosted, so **Re-pull image** can be used for an explicitly approved update.
+Image publication or a repository change is not deployment acceptance. If Portainer
+automatically updates from the tracked branch, merging into it is also a deployment
+decision: keep that merge on hold until the checks below are complete.
 
-Before updating, pull only the adapter on the target Docker host:
+Before updating an existing installation:
+
+1. Record the running application version and exact image digest, retain the previous
+   image, and take a recoverable, application-consistent backup of **both** named volumes.
+   A tag rollback alone cannot reverse a database migration.
+2. Review the [published image evidence and inherited security findings](https://github.com/MichaelSchmidle/voicebox-container/issues/3).
+   Publication approval does not accept these risks for your deployment. Keep access
+   private and restrict models, caches and uploaded media to trusted inputs.
+3. Verify that the existing data, generations and cache files are writable by UID/GID
+   `10001:10001`. An old root-owned volume is not repaired by switching images. Any
+   ownership change or data migration needs its own backed-up, approved procedure;
+   this stack does not run automatic `chown` or force the application to run as root.
+4. Remove old `VOICEBOX_IMAGE` / `VOICEBOX_ADAPTER_IMAGE` environment overrides or
+   set them to the intended registry references. Existing Portainer values win over
+   Compose defaults; `VOICEBOX_IMAGE=stacksmith_voicebox:latest` will not switch itself.
+   Preserve deliberate version/digest pins instead of overwriting them blindly.
+5. Pull both configured images and update the stack only after deployment approval.
+   With CLI-managed configuration, use the `pull` and `up -d` commands above. In Portainer,
+   update from the approved Git revision with **Re-pull image** enabled for registry images.
+6. Verify both containers are healthy, existing profiles and generations remain
+   accessible, and a real authenticated `/v1/audio/speech` request succeeds. CUDA/Qwen
+   image validation does not establish this stack's storage migration or adapter integration.
+
+Both `latest` tags are mutable. Voicebox follows reviewed packaging promotions; the
+adapter follows stable releases. Neither requires a host-side source build. The
+Python-based Voicebox healthcheck does not require `curl` in the runtime image.
+
+### Optional local source build
+
+The upstream source-build path remains available, but is not the default registry
+packaging and does not inherit its ARM64 CUDA validation. In `voicebox/.env`, explicitly
+set `VOICEBOX_IMAGE=stacksmith_voicebox:latest` before using the build overlay, and
+optionally change `VOICEBOX_BUILD_CONTEXT` to a local checkout or reviewed upstream ref.
+This avoids tagging a local build as the registry release.
 
 ```bash
-docker pull ghcr.io/michaelschmidle/voicebox-openai-adapter:latest
+docker compose --env-file voicebox/.env -f voicebox/docker-compose.yml -f voicebox/docker-compose.build.yml build
+docker compose --env-file voicebox/.env -f voicebox/docker-compose.yml -f voicebox/docker-compose.build.yml up -d
 ```
 
-Then update the Git stack from the desired revision. Remove an old
-`VOICEBOX_ADAPTER_IMAGE` override or set it to the same `:latest` reference: existing
-Portainer environment values override the Compose default. If you deliberately use a
-different adapter reference, pull that exact reference instead. No Voicebox rebuild is
-needed for an adapter-only update. Verify both containers are healthy after updating.
-
-`latest` is mutable and follows stable adapter releases; prereleases do not advance it.
+Use both files for subsequent local-image operations; the overlay sets `pull_policy: never`. For Portainer, build/load the image on its target host, include the overlay,
+and leave **Re-pull image** disabled: forced pulling may override service policy in
+some versions. Do not use the registry update procedure for a local-only image.
 
 ## OpenAI-compatible TTS sidecar
 
@@ -165,6 +198,6 @@ Tools include `voicebox.speak`, `voicebox.transcribe`, `voicebox.list_profiles`,
 
 ## Notes
 
-- First build can take several minutes because it builds the frontend and installs Python/TTS dependencies.
+- Registry pulls include application dependencies, not runtime model weights; initial model downloads can take time. Optional source builds also build the frontend and install Python/TTS dependencies.
 - Model downloads are persisted under `/app/data/cache/huggingface` in the main `stacksmith_voicebox_data` volume.
 - If CUDA out-of-memory errors appear, reduce the vLLM GPU reservation and/or Voicebox memory pressure before blaming Voicebox itself.

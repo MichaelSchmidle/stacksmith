@@ -1,7 +1,6 @@
 services:
   voicebox:
-    image: ${VOICEBOX_IMAGE:-stacksmith_voicebox:latest}
-    pull_policy: never
+    image: ${VOICEBOX_IMAGE:-ghcr.io/michaelschmidle/voicebox-container:latest}
     container_name: stacksmith_voicebox
     restart: unless-stopped
     environment:
@@ -20,9 +19,9 @@ services:
     healthcheck:
       test:
         - CMD
-        - curl
-        - -f
-        - http://127.0.0.1:17493/health
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:17493/health', timeout=5).close()
       interval: 30s
       timeout: 10s
       retries: 3
