@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -147,10 +148,63 @@ def validate_velogb10_token_budget() -> None:
     print(f"velogb10 token budget: {defaults}: OK")
 
 
+def validate_voicebox_registry_contract() -> None:
+    stack = ROOT / "voicebox"
+    registry_image = "ghcr.io/michaelschmidle/voicebox-container:latest"
+    adapter_image = "ghcr.io/michaelschmidle/voicebox-openai-adapter:latest"
+
+    def render(*, example: bool = False, overlay: bool = False, **overrides: str) -> dict:
+        env = {key: value for key, value in os.environ.items()
+               if not key.startswith("VOICEBOX_") and key != "COMPOSE_FILE"}
+        env.update(VOICEBOX_HOSTNAME="voicebox.example.com",
+                   VOICEBOX_ADAPTER_API_KEY="ci-placeholder")
+        env.update(overrides)
+        command = ["docker", "compose", "--env-file",
+                   str(stack / ".env.example") if example else os.devnull,
+                   "-f", str(stack / "docker-compose.yml")]
+        if overlay:
+            command.extend(["-f", str(stack / "docker-compose.build.yml")])
+        command.extend(["config", "--format", "json"])
+        return json.loads(subprocess.check_output(command, cwd=ROOT, env=env, text=True))
+
+    defaults = render()
+    example = render(example=True)
+    for config in (defaults, example):
+        voicebox = config["services"]["voicebox"]
+        assert voicebox["image"] == registry_image
+        assert voicebox.get("pull_policy") != "never"
+        assert "build" not in voicebox
+        assert voicebox["healthcheck"]["test"][1] == "python"
+        assert config["services"]["voicebox-openai-adapter"]["image"] == adapter_image
+        assert {(v["source"], v["target"]) for v in voicebox["volumes"]} == {
+            ("voicebox-data", "/app/data"),
+            ("voicebox-generations", "/app/data/generations"),
+        }
+        assert config["volumes"]["voicebox-data"]["name"] == "stacksmith_voicebox_data"
+        assert config["volumes"]["voicebox-generations"]["name"] == "stacksmith_voicebox_generations"
+
+    custom = render(example=True, VOICEBOX_IMAGE="example.com/voicebox:custom",
+                    VOICEBOX_ADAPTER_IMAGE="example.com/adapter:custom",
+                    VOICEBOX_CPU_LIMIT="2", VOICEBOX_MEMORY_LIMIT="8G")
+    assert custom["services"]["voicebox"]["image"] == "example.com/voicebox:custom"
+    assert custom["services"]["voicebox-openai-adapter"]["image"] == "example.com/adapter:custom"
+    limits = custom["services"]["voicebox"]["deploy"]["resources"]["limits"]
+    assert float(limits["cpus"]) == 2
+    assert int(limits["memory"]) == 8589934592
+    for example_mode in (False, True):
+        local = render(example=example_mode, overlay=True, VOICEBOX_IMAGE="stacksmith_voicebox:latest",
+                       VOICEBOX_BUILD_CONTEXT="https://github.com/jamiepine/voicebox.git#main")
+        assert local["services"]["voicebox"]["image"] == "stacksmith_voicebox:latest"
+        assert local["services"]["voicebox"]["pull_policy"] == "never"
+        assert local["services"]["voicebox"]["build"]["context"] == "https://github.com/jamiepine/voicebox.git#main"
+    print("voicebox registry defaults, overrides, storage and local build: OK")
+
+
 def main() -> None:
     validate_all_compose()
     validate_qwen_reasoning_aliases()
     validate_velogb10_token_budget()
+    validate_voicebox_registry_contract()
 
 
 if __name__ == "__main__":
