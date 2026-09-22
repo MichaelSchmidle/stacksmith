@@ -16,7 +16,8 @@ Official docs:
 - Voicebox listens on container port `17493`; Traefik routes to that fixed internal port.
 - Voicebox has no built-in authentication, so it should stay Tailscale/VPN-only or sit behind an auth middleware before broader exposure.
 - Upstream Docker currently builds from source; prebuilt GHCR images are documented as coming later, not available now.
-- The adapter is a prebuilt multi-architecture image pinned by semantic version and immutable manifest digest. Portainer never builds adapter source.
+- Voicebox uses a locally built image with `pull_policy: never`; build or load it on the target Docker host before deploying. A registry-hosted `VOICEBOX_IMAGE` override must also be pulled explicitly before deployment.
+- The adapter is a prebuilt multi-architecture image following `latest`, consistent with Stacksmith application-image policy. Portainer never builds adapter source. Override `VOICEBOX_ADAPTER_IMAGE` with a version/digest when reproducibility is required.
 - Only `/v1/audio/*` routes to the bearer-authenticated adapter. Existing Voicebox UI/API routes continue to target Voicebox.
 
 ## Quick start
@@ -61,6 +62,26 @@ https://voicebox.yourdomain.com
 curl -fsS https://voicebox.yourdomain.com/health
 curl -fsS https://voicebox.yourdomain.com/profiles
 ```
+
+## Portainer Git stack updates
+
+Deploy `voicebox/docker-compose.yml` without the build override. Keep **Re-pull image**
+disabled for this mixed local/registry stack; forced pulling may override service policy
+depending on the Portainer version. Do not remove the local Voicebox image or data volumes.
+
+Before updating, pull only the adapter on the target Docker host:
+
+```bash
+docker pull ghcr.io/michaelschmidle/voicebox-openai-adapter:latest
+```
+
+Then update the Git stack from the desired revision. Remove an old
+`VOICEBOX_ADAPTER_IMAGE` override or set it to the same `:latest` reference: existing
+Portainer environment values override the Compose default. If you deliberately use a
+different adapter reference, pull that exact reference instead. No Voicebox rebuild is
+needed for an adapter-only update. Verify both containers are healthy after updating.
+
+`latest` is mutable and follows stable adapter releases; prereleases do not advance it.
 
 ## OpenAI-compatible TTS sidecar
 
