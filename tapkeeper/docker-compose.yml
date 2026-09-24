@@ -12,7 +12,6 @@ services:
       - no-new-privileges:true
     environment:
       TAPKEEPER_USER_ID: ${TAPKEEPER_USER_ID:?Set the positive Telegram owner ID}
-      TAPKEEPER_CHAT_ID: ${TAPKEEPER_CHAT_ID:?Set the same positive private chat ID}
       TZ: ${TZ:-Europe/Zurich}
       TAPKEEPER_MORNING: ${TAPKEEPER_MORNING:-10:00}
       TAPKEEPER_EVENING: ${TAPKEEPER_EVENING:-20:00}

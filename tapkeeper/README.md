@@ -30,7 +30,7 @@ silently creating empty directories. Never put private files in this repository.
 - `TAPKEEPER_CONFIG_FILE`: existing catalogue-only JSON (`{"watches":{"synthetic.reference":"Synthetic watch"}}`).
 - `TAPKEEPER_TOKEN_FILE`: existing UTF-8 file containing only the dedicated bot token.
 - `TAPKEEPER_DATA_DIR`: existing local-filesystem directory for SQLite and sidecars.
-- `TAPKEEPER_USER_ID` and `TAPKEEPER_CHAT_ID`: equal positive private owner/chat IDs.
+- `TAPKEEPER_USER_ID`: positive Telegram owner ID; also used as the private chat destination.
 - `TZ`, `TAPKEEPER_MORNING`, `TAPKEEPER_EVENING`: one authoritative local schedule,
   default/examples Europe/Zurich and 10:00/20:00.
 
@@ -40,12 +40,13 @@ ACLs). Rootless/user-namespace Docker requires mapped ownership. Do not solve a
 permission error by making secrets world-readable or the service root. Avoid SMB/NFS
 for the database. Environment alone controls timezone/schedule; JSON accepts only `watches`. Old
 scalar/topic JSON is rejected before database/network initialization. Only private
-1:1 chats are supported: groups/topics and mismatched owner/chat IDs are rejected.
+1:1 chats are supported: incoming sender and chat are both checked against the owner
+ID; groups/topics are rejected. Old `TAPKEEPER_CHAT_ID` stack variables can be removed.
 
 Keep the env-file private (0600), with literal `KEY=value` entries, no quotes,
 expansion, duplicate keys or inline comments. Store token contents only in the token
 file. The same env-file is the scalar source for deployment and offline backup; fill
-all five runtime values explicitly for backup, even where Compose offers defaults.
+all four runtime values explicitly for backup, even where Compose offers defaults.
 Do not override these scalar settings in the shell. Portainer users must keep a
 matching private Docker env-file for recovery and update both under the backup lock.
 
