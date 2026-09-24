@@ -8,14 +8,18 @@ No incoming ports, Traefik labels, or shared `stacksmith` network are needed.
 Deploy this subfolder independently in Portainer or Docker Compose. The image must
 be prebuilt; Portainer does not build it. Initial image workflow targets linux/amd64.
 
-## Release prerequisite
+## Image and rolling updates
 
-Merge/release the Tapkeeper packaging first. Its owner-triggered version tag publishes
-to GHCR; PR builds do not. Verify package access and pull the release, then use its
-**actual manifest digest** in `TAPKEEPER_IMAGE`. No usable image pin is invented in
-`.env.example`; it intentionally fails until configured. Compose requires a nonempty
-image value but cannot validate digest syntax: the operator must pin and verify it.
-Do not use `latest`. This bundle alone is not deployment or migration approval.
+Compose uses `ghcr.io/michaelschmidle/tapkeeper:latest` directly; no image environment
+variable is required. Passing main-branch builds publish `latest`; PR builds do not.
+Version tags remain available and do not move `latest`. Verify registry access with
+`docker compose pull` before deployment.
+
+This follows Stacksmith's rolling-update policy, accepting occasional breaking updates
+instead of routine version-bump maintenance. Configure automatic pull/redeployment in
+Portainer if desired: the tag alone does not schedule updates. Keep recoverable backups
+and record the actual running image identity; restoring `latest` later is not rollback.
+This bundle alone is not initial deployment or migration approval.
 
 ## Setup
 
@@ -29,7 +33,6 @@ silently creating empty directories. Never put private files in this repository.
 - `TAPKEEPER_USER_ID` and `TAPKEEPER_CHAT_ID`: equal positive private owner/chat IDs.
 - `TZ`, `TAPKEEPER_MORNING`, `TAPKEEPER_EVENING`: one authoritative local schedule,
   default/examples Europe/Zurich and 10:00/20:00.
-- `TAPKEEPER_IMAGE`: verified `ghcr.io/michaelschmidle/tapkeeper@sha256:<actual-digest>`.
 
 UID/GID is fixed at **10001:10001**. Prepare the data directory as that owner, mode
 0700; give configuration and token that owner and mode 0400 (or equivalent restrictive
@@ -65,10 +68,14 @@ an offline rehearsal: use the following commands instead.
 
 ## Offline backup and isolated restore
 
-Export the same image/config/data paths into your shell from your private deployment
-settings. Set `B` to a **new** backup filename, `R` to a new isolated restore directory
-owned by 10001:10001, and `BACKUPS` to an existing private backup directory owned by
-that UID. All paths below are absolute Docker-host paths. Set `ENV_FILE` to that same private
+Export the same config/data paths into your shell from your private deployment
+settings. Set `BACKUP_IMAGE` to the exact image used by the source database, not a
+freshly pulled `latest`. For an existing container, obtain its local image ID with
+`docker inspect --format '{{.Image}}' stacksmith_tapkeeper`; for recovery on another
+host, pull the registry digest recorded with the snapshot. Keep that image fixed
+through backup/restore and coordinate with automatic redeployments. Set `B` to a
+**new** backup filename, `R` to a new isolated restore directory owned by 10001:10001,
+and `BACKUPS` to an existing private backup directory owned by that UID. All paths below are absolute Docker-host paths. Set `ENV_FILE` to that same private
 Docker env-file. No token contents or token mount are needed.
 
 ```sh
@@ -78,7 +85,7 @@ docker run --rm --network none --env-file "$ENV_FILE" --read-only --cap-drop ALL
   --mount "type=bind,src=$TAPKEEPER_CONFIG_FILE,dst=/config.json,readonly" \
   --mount "type=bind,src=$TAPKEEPER_DATA_DIR,dst=/data" \
   --mount "type=bind,src=$BACKUPS,dst=/backups" \
-  "$TAPKEEPER_IMAGE" --config /config.json --db /data/tapkeeper.db backup "/backups/$B"
+  "$BACKUP_IMAGE" --config /config.json --db /data/tapkeeper.db backup "/backups/$B"
 
 # R must be separate from live storage. Existing destination DB is refused.
 docker run --rm --network none --env-file "$ENV_FILE" --read-only --cap-drop ALL \
@@ -86,12 +93,12 @@ docker run --rm --network none --env-file "$ENV_FILE" --read-only --cap-drop ALL
   --mount "type=bind,src=$TAPKEEPER_CONFIG_FILE,dst=/config.json,readonly" \
   --mount "type=bind,src=$BACKUPS,dst=/backups,readonly" \
   --mount "type=bind,src=$R,dst=/restore" \
-  "$TAPKEEPER_IMAGE" --config /config.json --db /restore/tapkeeper.db restore "/backups/$B"
+  "$BACKUP_IMAGE" --config /config.json --db /restore/tapkeeper.db restore "/backups/$B"
 
 docker run --rm --network none --env-file "$ENV_FILE" --read-only \
   --mount "type=bind,src=$TAPKEEPER_CONFIG_FILE,dst=/config.json,readonly" \
   --mount "type=bind,src=$R,dst=/restore" \
-  "$TAPKEEPER_IMAGE" --config /config.json --db /restore/tapkeeper.db export /restore/check.csv
+  "$BACKUP_IMAGE" --config /config.json --db /restore/tapkeeper.db export /restore/check.csv
 ```
 
 Compare the restored CSV against a snapshot from the same backup point, plus full
@@ -103,9 +110,11 @@ recovery point/time before production. This bundle installs no backup scheduler.
 
 ## Upgrade and rollback
 
-Stop the service, take a consistent backup and preserve matching catalogue/env-file/token and old image
-pin. Review schema compatibility/migrations, pull the new digest and recreate through
-the same manager. Verify visible operation only with approval. For rollback, stop the
+For a controlled update, stop the service, take a consistent backup and preserve
+matching catalogue/env-file/token and the old image digest. Pull `latest` and recreate
+through the same manager. Automatic updates can bypass that pre-upgrade checkpoint;
+choose backup frequency accordingly and retain image identities with snapshots.
+For rollback, pause automatic updates, stop the
 poller, preserve all newer data, restore a compatible snapshot into a new directory and
 switch the data path and image pin together. Account explicitly for writes since the
 snapshot; do not delete them or assume a code downgrade undoes schema changes.
@@ -115,3 +124,6 @@ requires `env_file` pointing to this same file. It freezes and archives the sett
 verifies catalogue/env/token immutability and runs only the native offline command.
 It installs nothing here; existing operational installations remain unchanged until
 separately approved and requalified with the matching image and catalogue format.
+The operator uses a separately configured immutable image: a moving deployment tag
+does not update that setting. Keep its image compatible with the deployed database
+before enabling automated backups or accepting a schema-changing rolling update.
