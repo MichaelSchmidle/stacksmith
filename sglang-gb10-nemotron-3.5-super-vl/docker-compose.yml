@@ -1,0 +1,109 @@
+# NVIDIA Nemotron 3.5 Super VL NVFP4 + LiLiCorr on one DGX Spark / GB10.
+services:
+  nemotron:
+    image: lmsysorg/sglang:nemotron3-5-super
+    platform: linux/arm64
+    container_name: stacksmith_sglang_gb10_nemotron_3_5_super_vl
+    restart: "no"
+    mem_limit: 112g
+    memswap_limit: 112g
+    shm_size: 16g
+    environment:
+      TZ: ${TZ:-Europe/Zurich}
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      HF_HOME: /cache/huggingface
+      XDG_CACHE_HOME: /cache
+      TORCHINDUCTOR_CACHE_DIR: /cache/inductor
+    volumes:
+      - type: bind
+        source: ${NEMOTRON_MODELS_DIR:?Set NEMOTRON_MODELS_DIR to the prepared host checkpoint directory}/nvfp4
+        target: /models/nvfp4
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${NEMOTRON_MODELS_DIR:?Set NEMOTRON_MODELS_DIR to the prepared host checkpoint directory}/lilicorr
+        target: /models/lilicorr
+        read_only: true
+        bind:
+          create_host_path: false
+      - nemotron-cache:/cache
+    command:
+      - python3
+      - -m
+      - sglang.launch_server
+      - --model-path
+      - /models/nvfp4
+      - --served-model-name
+      - nemotron-3.5-super-vl
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --trust-remote-code
+      - --kv-cache-dtype
+      - fp8_e4m3
+      - --tp-size
+      - "1"
+      - --max-running-requests
+      - "1"
+      - --attention-backend
+      - flashinfer
+      - --mamba-backend
+      - flashinfer
+      - --mamba-ssm-dtype
+      - float16
+      - --enable-mamba-cache-stochastic-rounding
+      - --mamba-cache-philox-rounds
+      - "5"
+      - --mamba-radix-cache-strategy
+      - extra_buffer
+      - --reasoning-parser
+      - nemotron_3
+      - --tool-call-parser
+      - qwen3_coder
+      - --speculative-algorithm
+      - DFLASH
+      - --speculative-draft-model-path
+      - /models/lilicorr
+      - --context-length
+      - ${NEMOTRON_CONTEXT_LENGTH:-32768}
+      - --mem-fraction-static
+      - ${NEMOTRON_MEM_FRACTION_STATIC:-0.80}
+      - --chunked-prefill-size
+      - "2048"
+      - --limit-mm-data-per-request
+      - '{"image":1,"video":0,"audio":0}'
+      - --api-key
+      - ${NEMOTRON_API_KEY:?Set NEMOTRON_API_KEY to a strong random Bearer token}
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20m
+    networks:
+      - stacksmith
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sglang-gb10-nemotron-3-5-super-vl.rule=Host(`${NEMOTRON_HOSTNAME:?Set NEMOTRON_HOSTNAME to the routed hostname}`)"
+      - "traefik.http.routers.sglang-gb10-nemotron-3-5-super-vl.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.sglang-gb10-nemotron-3-5-super-vl.tls.certresolver=stacksmith"
+      - "traefik.http.services.sglang-gb10-nemotron-3-5-super-vl.loadbalancer.server.port=8000"
+      - "traefik.http.routers.sglang-gb10-nemotron-3-5-super-vl.middlewares=secure-headers@docker"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+networks:
+  stacksmith:
+    external: true
+
+volumes:
+  nemotron-cache:
+    name: stacksmith_sglang_gb10_nemotron_3_5_super_vl_cache

@@ -200,7 +200,105 @@ def validate_voicebox_registry_contract() -> None:
     print("voicebox registry defaults, overrides, storage and local build: OK")
 
 
+def validate_nemotron_spark_contract() -> None:
+    stack = ROOT / "sglang-gb10-nemotron-3.5-super-vl"
+    required = {
+        "NEMOTRON_HOSTNAME": "nemotron.example.com",
+        "NEMOTRON_API_KEY": "ci-placeholder",
+        "NEMOTRON_MODELS_DIR": "/srv/nemotron-super-vl",
+    }
+
+    def render(example: bool = False, /, **overrides: str | None) -> subprocess.CompletedProcess:
+        env = {key: value for key, value in os.environ.items()
+               if not key.startswith("NEMOTRON_") and key != "COMPOSE_FILE"}
+        env.update(required)
+        for key, value in overrides.items():
+            if value is None:
+                env.pop(key, None)
+            else:
+                env[key] = value
+        return subprocess.run(
+            ["docker", "compose", "--env-file",
+             str(stack / ".env.example") if example else os.devnull,
+             "-f", str(stack / "docker-compose.yml"), "config", "--format", "json"],
+            cwd=ROOT, env=env, text=True, capture_output=True,
+        )
+
+    def config(*, example: bool = False, **overrides: str) -> dict:
+        result = render(example, **overrides)
+        result.check_returncode()
+        return json.loads(result.stdout)
+
+    for example in (False, True):
+        rendered = config(example=example)
+        service = rendered["services"]["nemotron"]
+        args = service["command"]
+        expected = {
+            "--model-path": "/models/nvfp4",
+            "--speculative-draft-model-path": "/models/lilicorr",
+            "--speculative-algorithm": "DFLASH",
+            "--served-model-name": "nemotron-3.5-super-vl",
+            "--reasoning-parser": "nemotron_3",
+            "--tool-call-parser": "qwen3_coder",
+            "--kv-cache-dtype": "fp8_e4m3",
+            "--mamba-backend": "flashinfer",
+            "--mamba-ssm-dtype": "float16",
+            "--mamba-cache-philox-rounds": "5",
+            "--mamba-radix-cache-strategy": "extra_buffer",
+            "--max-running-requests": "1",
+            "--context-length": "32768",
+            "--mem-fraction-static": "0.80",
+            "--api-key": required["NEMOTRON_API_KEY"],
+            "--port": "8000",
+        }
+        for flag, value in expected.items():
+            assert args[args.index(flag) + 1] == value, (flag, args)
+        assert "--trust-remote-code" in args
+        assert "--enable-mamba-cache-stochastic-rounding" in args
+        assert json.loads(args[args.index("--limit-mm-data-per-request") + 1]) == {
+            "image": 1, "video": 0, "audio": 0,
+        }
+        assert service["image"] == "lmsysorg/sglang:nemotron3-5-super"
+        assert service["platform"] == "linux/arm64"
+        assert not any(key in service for key in ("ports", "network_mode", "build", "privileged", "ipc"))
+        assert set(service["networks"]) == {"stacksmith"}
+        assert rendered["networks"]["stacksmith"]["external"] is True
+        binds = [v for v in service["volumes"] if v["type"] == "bind"]
+        assert {(v["source"], v["target"]) for v in binds} == {
+            (required["NEMOTRON_MODELS_DIR"] + "/nvfp4", "/models/nvfp4"),
+            (required["NEMOTRON_MODELS_DIR"] + "/lilicorr", "/models/lilicorr"),
+        }
+        # Older Compose releases omit false fields from JSON. Keep the explicit
+        # source setting as well as checking the normalized effective value.
+        source = (stack / "docker-compose.yml").read_text()
+        assert source.count("create_host_path: false") == len(binds) == 2
+        assert all(v["read_only"] and v.get("bind", {}).get("create_host_path", False) is False
+                   for v in binds)
+        assert service["environment"]["HF_HUB_OFFLINE"] == "1"
+        assert service["environment"]["TRANSFORMERS_OFFLINE"] == "1"
+        assert int(service["mem_limit"]) == int(service["memswap_limit"]) == 112 * 1024**3
+        assert service["restart"] == "no"
+        assert service["deploy"]["resources"]["reservations"]["devices"] == [
+            {"driver": "nvidia", "count": 1, "capabilities": ["gpu"]},
+        ]
+        labels = service["labels"]
+        router = "traefik.http.routers.sglang-gb10-nemotron-3-5-super-vl"
+        assert labels[router + ".entrypoints"] == "websecure-tailscale"
+        assert labels[router + ".rule"] == "Host(`nemotron.example.com`)"
+
+    for key in required:
+        for value in (None, ""):
+            failed = render(**{key: value})
+            assert failed.returncode != 0 and key in failed.stderr, (key, value, failed)
+    custom = config(NEMOTRON_CONTEXT_LENGTH="16384", NEMOTRON_MEM_FRACTION_STATIC="0.75")
+    args = custom["services"]["nemotron"]["command"]
+    assert args[args.index("--context-length") + 1] == "16384"
+    assert args[args.index("--mem-fraction-static") + 1] == "0.75"
+    print("nemotron Spark recipe, fail-closed inputs, offline mounts and private routing: OK")
+
+
 def main() -> None:
+    validate_nemotron_spark_contract()
     validate_all_compose()
     validate_qwen_reasoning_aliases()
     validate_velogb10_token_budget()
