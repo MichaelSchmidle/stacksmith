@@ -276,6 +276,7 @@ def validate_nemotron_spark_contract() -> None:
                    for v in binds)
         assert service["environment"]["HF_HUB_OFFLINE"] == "1"
         assert service["environment"]["TRANSFORMERS_OFFLINE"] == "1"
+        assert service["environment"].get("MAX_JOBS") == "2", "Nemotron JIT compilation must be capped at two jobs"
         assert int(service["mem_limit"]) == int(service["memswap_limit"]) == 112 * 1024**3
         assert service["restart"] == "no"
         assert service["deploy"]["resources"]["reservations"]["devices"] == [
@@ -290,7 +291,8 @@ def validate_nemotron_spark_contract() -> None:
         for value in (None, ""):
             failed = render(**{key: value})
             assert failed.returncode != 0 and key in failed.stderr, (key, value, failed)
-    custom = config(NEMOTRON_CONTEXT_LENGTH="16384", NEMOTRON_MEM_FRACTION_STATIC="0.75")
+    custom = config(NEMOTRON_CONTEXT_LENGTH="16384", NEMOTRON_MEM_FRACTION_STATIC="0.75", MAX_JOBS="64")
+    assert custom["services"]["nemotron"]["environment"]["MAX_JOBS"] == "2"
     args = custom["services"]["nemotron"]["command"]
     assert args[args.index("--context-length") + 1] == "16384"
     assert args[args.index("--mem-fraction-static") + 1] == "0.75"
