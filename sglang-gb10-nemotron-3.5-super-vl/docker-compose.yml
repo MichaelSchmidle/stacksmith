@@ -14,6 +14,9 @@ services:
       TRANSFORMERS_OFFLINE: "1"
       HF_HOME: /cache/huggingface
       XDG_CACHE_HOME: /cache
+      # SGLang does not derive this from XDG_CACHE_HOME. Match standalone prebuilds.
+      SGLANG_CACHE_DIR: /cache/sglang
+      FLASHINFER_WORKSPACE_BASE: /cache/sglang
       TORCHINDUCTOR_CACHE_DIR: /cache/inductor
       # Bound FlashInfer/SGLang Ninja compilation; this is not a runtime RAM cap.
       MAX_JOBS: "2"

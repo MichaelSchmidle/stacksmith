@@ -40,6 +40,66 @@ hf download nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4-LiLiCorr \
 
 Download the complete repositories, including tokenizer, processor and Python code, not only weight shards. Both mounts are read-only with `create_host_path: false`. Runtime Hugging Face/Transformers offline modes prevent an accidental checkpoint download during startup; missing files must be repaired during preparation. No HF token is passed to the server.
 
+## Persistent kernel caches and weights-unloaded prebuild
+
+`SGLANG_CACHE_DIR=/cache/sglang` and `FLASHINFER_WORKSPACE_BASE=/cache/sglang` explicitly place SGLang's caches and FlashInfer's version/architecture-specific JIT workspace in the existing `nemotron-cache` volume. `XDG_CACHE_HOME` alone does not redirect these paths. SGLang also derives its third-party cache defaults from this base; the existing explicit Inductor path remains `/cache/inductor`.
+
+For a cold build, prepare the expensive FlashInfer **`fused_moe_120`** module before loading model weights. This is a manual, one-shot compiler container, **not another serving service**. It mounts only the existing cache volume: no checkpoint directories, backend credentials, network or GPU access. It does not load the target/drafter or execute inference/autotuning. Other modules may still compile at server startup; this does not eliminate every runtime allocation or establish memory fit.
+
+Stop/pause the serving stack and any competing large model server through Portainer first; verify the workflows stay paused. Do not build against a cache being used by a running server. Keep unrelated services running. On the Docker endpoint, use **Bash**. The block uses the fixed volume name declared by Compose, verifies its label and refuses to build while any running container mounts it. Missing volumes or failed Docker queries stop the procedure rather than silently creating or warming the wrong cache. Keep the Portainer stack paused throughout: the idle check is a preflight, not a lock against another operator starting a server. The subshell keeps strict options and failures from changing or closing the calling interactive shell:
+
+```bash
+(
+set -eu
+CACHE_VOLUME=stacksmith_sglang_gb10_nemotron_3_5_super_vl_cache
+CACHE_LABEL=$(docker volume inspect --format '{{index .Labels "com.docker.compose.volume"}}' "$CACHE_VOLUME")
+if [ "$CACHE_LABEL" != nemotron-cache ]; then
+  printf 'Cache volume label mismatch: %s\n' "$CACHE_VOLUME" >&2
+  exit 1
+fi
+ACTIVE_CONTAINERS=$(docker ps -q --filter "volume=$CACHE_VOLUME")
+if [ -n "$ACTIVE_CONTAINERS" ]; then
+  printf 'Cache volume is used by running containers; stop them through Portainer first: %s\n' "$ACTIVE_CONTAINERS" >&2
+  exit 1
+fi
+IMAGE=$(docker image inspect lmsysorg/sglang:nemotron3-5-super --format '{{.Id}}')
+printf 'Prebuild image: %s; cache volume: %s\n' "$IMAGE" "$CACHE_VOLUME"
+
+# Preserve the output externally; check the exit status before any server start.
+# 32 GiB / four CPUs are bounds for this compiler-only example, not a measured
+# successful full-build budget. Failure must not trigger an automatic retry.
+docker run --rm -i --name stacksmith_nemotron_kernel_prebuild --pull=never \
+  --network none --read-only --memory 32g --memory-swap 32g --cpus 4 \
+  --tmpfs /tmp:rw,nosuid,nodev,size=4g \
+  --mount "type=volume,src=$CACHE_VOLUME,dst=/cache" \
+  -e MAX_JOBS=2 -e SGLANG_CACHE_DIR=/cache/sglang \
+  -e FLASHINFER_WORKSPACE_BASE=/cache/sglang -e FLASHINFER_CUDA_ARCH_LIST=12.1a \
+  -e TORCHINDUCTOR_CACHE_DIR=/cache/inductor \
+  -e HF_HUB_OFFLINE=1 -e TRANSFORMERS_OFFLINE=1 \
+  --entrypoint python3 "$IMAGE" -u - <<'PY'
+from pathlib import Path
+from sglang.srt.environ import redirect_third_party_caches
+
+# Apply the same third-party defaults before importing FlashInfer.
+redirect_third_party_caches()
+from flashinfer.jit.fused_moe import gen_cutlass_fused_moe_sm120_module
+
+spec = gen_cutlass_fused_moe_sm120_module(use_fast_build=False)
+assert spec.name == "fused_moe_120"
+assert spec.jit_library_path.is_relative_to(Path("/cache/sglang"))
+spec.build(verbose=True, need_lock=True)
+assert spec.jit_library_path.is_file(), "Compiler returned without its shared library"
+print("PREBUILD_ARTIFACT", spec.jit_library_path, flush=True)
+PY
+)
+```
+
+`12.1a` is the GB10 compiler target; the generator's `sm120`/`fused_moe_120` name covers this SM12x path. Do not use fast-build flags or a different architecture/cache layout when expecting the server to reuse the artifact. The script calls the runtime's **build-only** API, not `build_and_load()` or a model launcher. A compiler failure leaves partial work in the cache for inspection; it is not permission to increase limits or start the server anyway.
+
+After a successful build, recreate a disposable check container with the same image, cache mount and environment, and verify the reported artifact still exists at the resolved path. File persistence alone does **not** prove binary compatibility or GPU correctness: the next supervised server trial must verify it actually loads/reuses the module, completes warm-up and generates a response under the host-memory guard. Do not delete the volume during teardown (`down -v` would discard it).
+
+Cache binaries are trusted executable input. Restrict cache-volume write access. Record the exact image ID and use it for both preparation and serving; do not pull the rolling tag between phases. Reassess/rebuild the cache when the image, compiler, driver or architecture changes rather than assuming the directory name proves compatibility. The source/path probe for this procedure used image ID `sha256:8d30c455e22629697a894933597367c48931a449ab37e5d3f89cf9e290c44d6b`; the full compilation, shared-library load and GPU startup remain commissioning gates.
+
 ## Configure and deploy later
 
 For Portainer Git deployment, select this repository and Compose path **`sglang-gb10-nemotron-3.5-super-vl/docker-compose.yml`**. Enter the variables from `.env.example` in Portainer; Git deployments do not automatically load that example. Bind paths refer to the **Docker endpoint**, not the Portainer server. No auxiliary Git files or image build are required.

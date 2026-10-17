@@ -277,6 +277,11 @@ def validate_nemotron_spark_contract() -> None:
         assert service["environment"]["HF_HUB_OFFLINE"] == "1"
         assert service["environment"]["TRANSFORMERS_OFFLINE"] == "1"
         assert service["environment"].get("MAX_JOBS") == "2", "Nemotron JIT compilation must be capped at two jobs"
+        assert service["environment"].get("SGLANG_CACHE_DIR") == "/cache/sglang", "SGLang caches must use the persistent volume"
+        assert service["environment"].get("FLASHINFER_WORKSPACE_BASE") == "/cache/sglang", "Prebuild and runtime must resolve the same FlashInfer workspace"
+        assert any(v["type"] == "volume" and v["source"] == "nemotron-cache" and v["target"] == "/cache"
+                   for v in service["volumes"])
+        assert rendered["volumes"]["nemotron-cache"]["name"] == "stacksmith_sglang_gb10_nemotron_3_5_super_vl_cache"
         assert int(service["mem_limit"]) == int(service["memswap_limit"]) == 112 * 1024**3
         assert service["restart"] == "no"
         assert service["deploy"]["resources"]["reservations"]["devices"] == [
@@ -291,16 +296,145 @@ def validate_nemotron_spark_contract() -> None:
         for value in (None, ""):
             failed = render(**{key: value})
             assert failed.returncode != 0 and key in failed.stderr, (key, value, failed)
-    custom = config(NEMOTRON_CONTEXT_LENGTH="16384", NEMOTRON_MEM_FRACTION_STATIC="0.75", MAX_JOBS="64")
-    assert custom["services"]["nemotron"]["environment"]["MAX_JOBS"] == "2"
+    custom = config(NEMOTRON_CONTEXT_LENGTH="16384", NEMOTRON_MEM_FRACTION_STATIC="0.75", MAX_JOBS="64",
+                    SGLANG_CACHE_DIR="/outside-volume", FLASHINFER_WORKSPACE_BASE="/different-workspace")
+    custom_env = custom["services"]["nemotron"]["environment"]
+    assert custom_env["MAX_JOBS"] == "2"
+    assert custom_env["SGLANG_CACHE_DIR"] == custom_env["FLASHINFER_WORKSPACE_BASE"] == "/cache/sglang"
     args = custom["services"]["nemotron"]["command"]
     assert args[args.index("--context-length") + 1] == "16384"
     assert args[args.index("--mem-fraction-static") + 1] == "0.75"
     print("nemotron Spark recipe, fail-closed inputs, offline mounts and private routing: OK")
 
 
+def validate_nemotron_prebuild_shell(shell: str) -> None:
+    """Execute the published shell with Docker stubbed; never contact a daemon."""
+    import sys
+    import tempfile
+
+    volume = "stacksmith_sglang_gb10_nemotron_3_5_super_vl_cache"
+    assert f"CACHE_VOLUME={volume}" in shell
+    with tempfile.TemporaryDirectory(prefix="nemotron-runbook-") as directory:
+        root = Path(directory)
+        docker = root / "docker"
+        docker.write_text(f"#!{sys.executable}\n" + '''import json
+import os
+import sys
+
+args = sys.argv[1:]
+with open(os.environ["DOCKER_CALL_LOG"], "a") as log:
+    log.write(json.dumps(args) + "\\n")
+scenario = os.environ["DOCKER_SCENARIO"]
+volume = "stacksmith_sglang_gb10_nemotron_3_5_super_vl_cache"
+if args[:2] == ["volume", "inspect"]:
+    assert args[2:] == ["--format", '{{index .Labels "com.docker.compose.volume"}}', volume], args
+    if scenario == "missing-volume":
+        sys.exit(1)
+    print("wrong-cache" if scenario == "wrong-label" else "nemotron-cache")
+elif args[:1] == ["ps"]:
+    assert "volume=" + volume in args, args
+    if scenario == "ps-error":
+        sys.exit(1)
+    if scenario == "busy":
+        print("running-server")
+elif args[:2] == ["image", "inspect"]:
+    if scenario == "image-error":
+        sys.exit(1)
+    print("sha256:runbook-test")
+elif args[:1] == ["run"]:
+    assert "type=volume,src=" + volume + ",dst=/cache" in args, args
+    assert "sha256:runbook-test" in args, args
+    if scenario == "build-error":
+        sys.exit(1)
+else:
+    raise AssertionError(args)
+''')
+        docker.chmod(0o755)
+        for scenario in ("success", "missing-volume", "wrong-label", "busy",
+                         "ps-error", "image-error", "build-error"):
+            log = root / (scenario + ".jsonl")
+            env = dict(os.environ, PATH=str(root) + os.pathsep + os.environ["PATH"],
+                       DOCKER_CALL_LOG=str(log), DOCKER_SCENARIO=scenario)
+            # Model pasting into a non-strict parent shell. Failure must return
+            # control without exiting it, leaking strict options or variables.
+            script = ('set +e +u\nunset CACHE_VOLUME IMAGE\n' + shell +
+                      '\nstatus=$?\nprintf "PARENT_SURVIVED %s\\n" "$status"\n'
+                      '[[ $- != *e* && $- != *u* && ! -v CACHE_VOLUME && ! -v IMAGE ]]')
+            result = subprocess.run(["bash", "-c", script], env=env,
+                                    text=True, capture_output=True)
+            assert result.returncode == 0, (scenario, result)
+            assert ("PARENT_SURVIVED 0" in result.stdout) == (scenario == "success"), (scenario, result)
+            assert "PARENT_SURVIVED " in result.stdout, (scenario, result)
+            calls = [json.loads(line) for line in log.read_text().splitlines()]
+            ran = any(args[0] == "run" for args in calls)
+            assert ran == (scenario in ("success", "build-error")), (scenario, calls)
+            if scenario == "busy":
+                assert "running" in result.stderr.lower(), result
+            if scenario == "wrong-label":
+                assert "label" in result.stderr.lower(), result
+    print("nemotron runbook: fixed volume, idle-cache guard and parent-shell isolation: OK")
+
+
+def validate_nemotron_prebuild_runbook() -> None:
+    """Exercise the published Python snippet without CUDA, weights or compilation."""
+    import contextlib
+    import io
+    import sys
+    import types
+    from unittest.mock import patch
+
+    readme = (ROOT / "sglang-gb10-nemotron-3.5-super-vl/README.md").read_text()
+    section = readme.split("## Persistent kernel caches and weights-unloaded prebuild\n", 1)[1]
+    shell = section.split("```bash\n", 1)[1].split("\n```", 1)[0]
+    subprocess.run(["bash", "-n"], input=shell, text=True, check=True)
+    assert "--network none" in shell and "--read-only" in shell
+    assert "--mount \"type=volume,src=$CACHE_VOLUME,dst=/cache\"" in shell
+    assert "--memory 32g --memory-swap 32g" in shell
+    assert "--gpus" not in shell and "/models" not in shell and "NEMOTRON_API_KEY" not in shell
+    validate_nemotron_prebuild_shell(shell)
+    source = shell.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+    code = compile(source, "README prebuild snippet", "exec")
+
+    for failure in (None, "compile", "artifact", "workspace"):
+        calls = []
+        artifact = Path("/outside-volume" if failure == "workspace" else
+                        "/cache/sglang/.cache/flashinfer/test/121a/cached_ops/fused_moe_120/fused_moe_120.so")
+
+        def redirect() -> None:
+            calls.append("redirect")
+
+        def build(*, verbose: bool, need_lock: bool) -> None:
+            assert verbose is True and need_lock is True
+            calls.append("build")
+            if failure == "compile":
+                raise RuntimeError("injected compiler failure")
+
+        def generate(*, use_fast_build: bool):
+            assert calls == ["redirect"] and use_fast_build is False
+            calls.append("generate")
+            return types.SimpleNamespace(name="fused_moe_120", jit_library_path=artifact, build=build)
+
+        names = ("sglang", "sglang.srt", "sglang.srt.environ", "flashinfer", "flashinfer.jit", "flashinfer.jit.fused_moe")
+        modules = {name: types.ModuleType(name) for name in names}
+        setattr(modules["sglang.srt.environ"], "redirect_third_party_caches", redirect)
+        setattr(modules["flashinfer.jit.fused_moe"], "gen_cutlass_fused_moe_sm120_module", generate)
+        output = io.StringIO()
+        with patch.dict(sys.modules, modules), patch.object(Path, "is_file", return_value=failure != "artifact"), contextlib.redirect_stdout(output):
+            try:
+                exec(code, {})
+            except (AssertionError, RuntimeError):
+                if failure is None:
+                    raise
+            else:
+                assert failure is None, f"prebuild must fail closed on {failure}"
+        assert ("PREBUILD_ARTIFACT" in output.getvalue()) == (failure is None)
+        assert calls == (["redirect", "generate"] if failure == "workspace" else ["redirect", "generate", "build"])
+    print("nemotron runbook: shell syntax and mocked build-only success/failure paths: OK")
+
+
 def main() -> None:
     validate_nemotron_spark_contract()
+    validate_nemotron_prebuild_runbook()
     validate_all_compose()
     validate_qwen_reasoning_aliases()
     validate_velogb10_token_budget()
