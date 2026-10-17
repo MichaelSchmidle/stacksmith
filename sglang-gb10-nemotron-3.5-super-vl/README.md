@@ -15,6 +15,8 @@ Single-DGX-Spark / GB10 candidate stack for NVIDIA's **120B-A12B NVFP4 vision-la
 
 The context/prefill/multimodal limits and `0.80` static-memory fraction are commissioning choices, not NVIDIA performance or memory-fit measurements. The 112 GiB container cap, equal swap limit, and private 16 GiB shared-memory allocation are guardrails, **not a guarantee against unified-memory pressure or host freezes**. Shared memory consumes the container budget; GPU allocations are not necessarily fully contained by cgroup accounting. Do not copy the smaller Qwen stack's `0.50` fraction: this target's weights alone exceed that pool. Stop the trial if host headroom deteriorates; do not keep increasing allocation to chase startup success.
 
+`MAX_JOBS=2` caps the Ninja build parallelism used by FlashInfer and SGLang JIT compilation. The inspected runtime reads this variable in both build paths; without it, Ninja chooses its own parallelism. This limits concurrent build jobs, **not** total CPU threads, GPU workspace or host memory. First-start compilation/autotuning can peak above the memory used by loaded weights and KV pools. Continue monitoring host memory and stop if headroom deteriorates: the cap is a bounded commissioning change, not a demonstrated fix for startup memory pressure. It does not disable autotuning or change the context, memory ceiling or model recipe.
+
 `restart: "no"` deliberately prevents automatic restart loops and unattended boot-time GPU contention during commissioning. Revisit restart policy only after an accepted deployment; health status alone does not restart a failed container.
 
 ## Prerequisites and checkpoint preparation
@@ -69,7 +71,7 @@ Before the trial, record the current server's stack configuration, image identit
 
 ## Commissioning checks
 
-1. Inspect container logs/status and host memory. Check for OOMs, missing kernels, unsupported arguments and checkpoint-loading errors. Verify LiLiCorr is actually enabled; an HTTP health response is insufficient.
+1. Inspect container logs/status and host memory. Capture startup logs in a protected file outside the container **before** a Portainer stop/recreate: teardown can remove the container and its Docker logs. Logs can contain the API key; redact them before sharing. Check for OOMs, missing kernels, unsupported arguments and checkpoint-loading errors. Verify LiLiCorr is actually enabled; an HTTP health response is insufficient.
 2. Verify routed `/health`, then `/v1/models` **with** the configured Bearer token. `/v1/models` without a token must return HTTP 401. Health/readiness/metrics endpoints are intentionally unauthenticated in this SGLang build; keep the entire route private.
 3. Exercise text, non-thinking mode, an actual local image and a complete tool-call/result round trip. Example below uses only Python's standard library, a small non-sensitive local image and explicit client environment variables. It does not read Portainer or deployment `.env` values.
 
