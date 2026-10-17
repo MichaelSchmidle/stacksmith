@@ -281,6 +281,7 @@ def validate_nemotron_spark_contract() -> None:
         assert service["environment"].get("FLASHINFER_WORKSPACE_BASE") == "/cache/sglang", "Prebuild and runtime must resolve the same FlashInfer workspace"
         assert any(v["type"] == "volume" and v["source"] == "nemotron-cache" and v["target"] == "/cache"
                    for v in service["volumes"])
+        assert rendered["volumes"]["nemotron-cache"]["name"] == "stacksmith_sglang_gb10_nemotron_3_5_super_vl_cache"
         assert int(service["mem_limit"]) == int(service["memswap_limit"]) == 112 * 1024**3
         assert service["restart"] == "no"
         assert service["deploy"]["resources"]["reservations"]["devices"] == [
@@ -306,6 +307,74 @@ def validate_nemotron_spark_contract() -> None:
     print("nemotron Spark recipe, fail-closed inputs, offline mounts and private routing: OK")
 
 
+def validate_nemotron_prebuild_shell(shell: str) -> None:
+    """Execute the published shell with Docker stubbed; never contact a daemon."""
+    import sys
+    import tempfile
+
+    volume = "stacksmith_sglang_gb10_nemotron_3_5_super_vl_cache"
+    assert f"CACHE_VOLUME={volume}" in shell
+    with tempfile.TemporaryDirectory(prefix="nemotron-runbook-") as directory:
+        root = Path(directory)
+        docker = root / "docker"
+        docker.write_text(f"#!{sys.executable}\n" + '''import json
+import os
+import sys
+
+args = sys.argv[1:]
+with open(os.environ["DOCKER_CALL_LOG"], "a") as log:
+    log.write(json.dumps(args) + "\\n")
+scenario = os.environ["DOCKER_SCENARIO"]
+volume = "stacksmith_sglang_gb10_nemotron_3_5_super_vl_cache"
+if args[:2] == ["volume", "inspect"]:
+    assert args[2:] == ["--format", '{{index .Labels "com.docker.compose.volume"}}', volume], args
+    if scenario == "missing-volume":
+        sys.exit(1)
+    print("wrong-cache" if scenario == "wrong-label" else "nemotron-cache")
+elif args[:1] == ["ps"]:
+    assert "volume=" + volume in args, args
+    if scenario == "ps-error":
+        sys.exit(1)
+    if scenario == "busy":
+        print("running-server")
+elif args[:2] == ["image", "inspect"]:
+    if scenario == "image-error":
+        sys.exit(1)
+    print("sha256:runbook-test")
+elif args[:1] == ["run"]:
+    assert "type=volume,src=" + volume + ",dst=/cache" in args, args
+    assert "sha256:runbook-test" in args, args
+    if scenario == "build-error":
+        sys.exit(1)
+else:
+    raise AssertionError(args)
+''')
+        docker.chmod(0o755)
+        for scenario in ("success", "missing-volume", "wrong-label", "busy",
+                         "ps-error", "image-error", "build-error"):
+            log = root / (scenario + ".jsonl")
+            env = dict(os.environ, PATH=str(root) + os.pathsep + os.environ["PATH"],
+                       DOCKER_CALL_LOG=str(log), DOCKER_SCENARIO=scenario)
+            # Model pasting into a non-strict parent shell. Failure must return
+            # control without exiting it, leaking strict options or variables.
+            script = ('set +e +u\nunset CACHE_VOLUME IMAGE\n' + shell +
+                      '\nstatus=$?\nprintf "PARENT_SURVIVED %s\\n" "$status"\n'
+                      '[[ $- != *e* && $- != *u* && ! -v CACHE_VOLUME && ! -v IMAGE ]]')
+            result = subprocess.run(["bash", "-c", script], env=env,
+                                    text=True, capture_output=True)
+            assert result.returncode == 0, (scenario, result)
+            assert ("PARENT_SURVIVED 0" in result.stdout) == (scenario == "success"), (scenario, result)
+            assert "PARENT_SURVIVED " in result.stdout, (scenario, result)
+            calls = [json.loads(line) for line in log.read_text().splitlines()]
+            ran = any(args[0] == "run" for args in calls)
+            assert ran == (scenario in ("success", "build-error")), (scenario, calls)
+            if scenario == "busy":
+                assert "running" in result.stderr.lower(), result
+            if scenario == "wrong-label":
+                assert "label" in result.stderr.lower(), result
+    print("nemotron runbook: fixed volume, idle-cache guard and parent-shell isolation: OK")
+
+
 def validate_nemotron_prebuild_runbook() -> None:
     """Exercise the published Python snippet without CUDA, weights or compilation."""
     import contextlib
@@ -322,6 +391,7 @@ def validate_nemotron_prebuild_runbook() -> None:
     assert "--mount \"type=volume,src=$CACHE_VOLUME,dst=/cache\"" in shell
     assert "--memory 32g --memory-swap 32g" in shell
     assert "--gpus" not in shell and "/models" not in shell and "NEMOTRON_API_KEY" not in shell
+    validate_nemotron_prebuild_shell(shell)
     source = shell.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
     code = compile(source, "README prebuild snippet", "exec")
 

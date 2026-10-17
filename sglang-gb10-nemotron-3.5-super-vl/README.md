@@ -46,17 +46,22 @@ Download the complete repositories, including tokenizer, processor and Python co
 
 For a cold build, prepare the expensive FlashInfer **`fused_moe_120`** module before loading model weights. This is a manual, one-shot compiler container, **not another serving service**. It mounts only the existing cache volume: no checkpoint directories, backend credentials, network or GPU access. It does not load the target/drafter or execute inference/autotuning. Other modules may still compile at server startup; this does not eliminate every runtime allocation or establish memory fit.
 
-Stop/pause the serving stack and any competing large model server through Portainer first; verify the workflows stay paused. Do not build against a cache being used by a running server. Keep unrelated services running. On the Docker endpoint, use **Bash** and select the actual Portainer Compose project; discovery must yield exactly one existing cache volume, otherwise stop rather than silently create or warm the wrong volume:
+Stop/pause the serving stack and any competing large model server through Portainer first; verify the workflows stay paused. Do not build against a cache being used by a running server. Keep unrelated services running. On the Docker endpoint, use **Bash**. The block uses the fixed volume name declared by Compose, verifies its label and refuses to build while any running container mounts it. Missing volumes or failed Docker queries stop the procedure rather than silently creating or warming the wrong cache. Keep the Portainer stack paused throughout: the idle check is a preflight, not a lock against another operator starting a server. The subshell keeps strict options and failures from changing or closing the calling interactive shell:
 
 ```bash
+(
 set -eu
-PROJECT=sglang-gb10-nemotron-3-5-super-vl # replace if the Portainer project differs
-mapfile -t caches < <(docker volume ls \
-  --filter "label=com.docker.compose.project=$PROJECT" \
-  --filter label=com.docker.compose.volume=nemotron-cache --format '{{.Name}}')
-test "${#caches[@]}" -eq 1
-CACHE_VOLUME=${caches[0]}
-docker volume inspect "$CACHE_VOLUME" >/dev/null
+CACHE_VOLUME=stacksmith_sglang_gb10_nemotron_3_5_super_vl_cache
+CACHE_LABEL=$(docker volume inspect --format '{{index .Labels "com.docker.compose.volume"}}' "$CACHE_VOLUME")
+if [ "$CACHE_LABEL" != nemotron-cache ]; then
+  printf 'Cache volume label mismatch: %s\n' "$CACHE_VOLUME" >&2
+  exit 1
+fi
+ACTIVE_CONTAINERS=$(docker ps -q --filter "volume=$CACHE_VOLUME")
+if [ -n "$ACTIVE_CONTAINERS" ]; then
+  printf 'Cache volume is used by running containers; stop them through Portainer first: %s\n' "$ACTIVE_CONTAINERS" >&2
+  exit 1
+fi
 IMAGE=$(docker image inspect lmsysorg/sglang:nemotron3-5-super --format '{{.Id}}')
 printf 'Prebuild image: %s; cache volume: %s\n' "$IMAGE" "$CACHE_VOLUME"
 
@@ -86,6 +91,7 @@ spec.build(verbose=True, need_lock=True)
 assert spec.jit_library_path.is_file(), "Compiler returned without its shared library"
 print("PREBUILD_ARTIFACT", spec.jit_library_path, flush=True)
 PY
+)
 ```
 
 `12.1a` is the GB10 compiler target; the generator's `sm120`/`fused_moe_120` name covers this SM12x path. Do not use fast-build flags or a different architecture/cache layout when expecting the server to reuse the artifact. The script calls the runtime's **build-only** API, not `build_and_load()` or a model launcher. A compiler failure leaves partial work in the cache for inspection; it is not permission to increase limits or start the server anyway.
