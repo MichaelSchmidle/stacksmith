@@ -91,6 +91,7 @@ Each service is in its own directory with complete documentation:
 - **Home Assistant** (`homeassistant/`) - Home automation platform
 - **Open WebUI** (`openwebui/`) - Chat interface for OpenAI-compatible local and remote models
 - **LiteLLM** (`litellm/`) - OpenAI-compatible model proxy for Open WebUI, LM Studio, vLLM, and hosted APIs
+- **Sure** (`sure/`) - Tailnet-routed personal finance dashboard with PostgreSQL, Redis and optional external-assistant MCP access
 - **Paperless-ngx** (`paperless/`) - Private document intake, German/English OCR and searchable archive with PostgreSQL and Redis
 - **Obsidian Web Desktop** (`obsidian/`) - Browser-accessible Obsidian desktop for a Syncthing-backed vault
 - **Voicebox** (`voicebox/`) - ARM64 NVIDIA/CUDA voice studio with prebuilt registry images and an OpenAI-compatible TTS sidecar
