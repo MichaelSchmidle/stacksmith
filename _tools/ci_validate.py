@@ -439,11 +439,19 @@ def validate_sure_contract() -> None:
         "SURE_HOSTNAME": "finance.example.com",
         "SURE_SECRET_KEY_BASE": "ci-placeholder",
         "SURE_DB_PASSWORD": "ci-placeholder",
+        "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY": "p" * 32,
+        "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY": "d" * 32,
+        "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT": "s" * 32,
     }
+    encryption_keys = {key for key in required if key.startswith("ACTIVE_RECORD_ENCRYPTION_")}
+    template = (stack / ".env.example").read_text().splitlines()
+    for key in encryption_keys:
+        assert f"{key}=" in template, f"missing blank encryption key in env template: {key}"
 
     def render(**overrides: str | None) -> subprocess.CompletedProcess:
         env = {key: value for key, value in os.environ.items()
-               if not key.startswith("SURE_") and key not in ("COMPOSE_FILE", "COMPOSE_ENV_FILES")}
+               if not key.startswith(("SURE_", "ACTIVE_RECORD_ENCRYPTION_"))
+               and key not in ("COMPOSE_FILE", "COMPOSE_ENV_FILES")}
         env.update(required)
         for key, value in overrides.items():
             if value is None:
@@ -473,7 +481,11 @@ def validate_sure_contract() -> None:
         assert env["RAILS_ASSUME_SSL"] == "true"
         assert env["RAILS_FORCE_SSL"] == "false"
         assert env["MCP_API_TOKEN"] == "" and env["MCP_USER_EMAIL"] == ""
+        for key in encryption_keys:
+            assert env.get(key) == required[key], f"{name} must receive explicit {key}"
         assert not any(key in env for key in ("OPENAI_ACCESS_TOKEN", "ANTHROPIC_API_KEY"))
+    for name in ("sure-db", "sure-redis"):
+        assert encryption_keys.isdisjoint(services[name].get("environment", {}))
     assert services["sure-worker"]["depends_on"]["sure"]["condition"] == "service_healthy"
     assert config["networks"]["sure-backend"]["internal"] is True
     assert set(services["sure-db"]["networks"]) == {"sure-backend"}
@@ -494,7 +506,10 @@ def validate_sure_contract() -> None:
         for missing in (None, ""):
             failed = render(**{key: missing})
             assert failed.returncode != 0 and key in failed.stderr, f"must reject empty/missing {key}"
-    print("sure: private routing, storage, MCP opt-in, stable images and fail-closed secrets: OK")
+    for missing in (None, ""):
+        failed = render(**{key: missing for key in encryption_keys})
+        assert failed.returncode != 0 and any(key in failed.stderr for key in encryption_keys)
+    print("sure: private routing, storage, MCP opt-in, stable images and fail-closed secrets/encryption: OK")
 
 
 def main() -> None:
