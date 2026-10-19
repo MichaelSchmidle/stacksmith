@@ -32,6 +32,9 @@ Prerequisites: Docker Standalone with Compose support, an existing external
 `stacksmith` network, the standard Traefik router/middleware/certificate setup,
 and DNS pointing your chosen finance-service hostname to that tailnet router.
 Use one instance of this bundle per Docker host because names are fixed.
+**First-time encryption setup below is for fresh/empty databases only.** If an
+existing database contains unencrypted records, do not deploy this requirement;
+follow the [encryption migration stop gate](#database-field-encryption) first.
 
 After this bundle is merged:
 
@@ -82,14 +85,28 @@ check used to enable encrypted model fields. Require encryption readiness in
 both application processes and investigate any startup warning that encryption
 is not configured; a healthy `/up` endpoint does not prove encryption works.
 
-**Existing installations:** provision the three variables in Portainer before
-merging/deploying this requirement if Git polling can trigger a redeployment.
-Do not change unrelated stack settings or expose setup while a deployment is
-incomplete. For an empty instance, generate a fresh set once. For an instance
-with users or financial records, first preserve its database and existing key
-material and agree a migration/re-encryption procedure. Adding keys does not
-retroactively encrypt previously stored plaintext. Do not replace existing
-keys or assume key removal/rotation is a supported rollback.
+**Enabling encryption is supported here only on a fresh/empty instance.**
+If an existing deployment is still empty, generate and preserve the three values
+once and provision them in Portainer **before merging** if Git polling can deploy
+this requirement. Keep initial access restricted until configuration is complete.
+
+**Populated, previously unencrypted installations: stop before enabling these
+keys or allowing this Compose change to deploy.** Adding keys does not backfill
+plaintext fields: it activates encrypted reads and deterministic email lookups,
+so existing plaintext values become unreadable and existing users cannot sign in.
+Preserve the current database, image and secrets, prevent automatic redeployment,
+and require a separately validated migration and recovery procedure first.
+
+Upstream provides a temporary
+[`ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA` compatibility flag](https://github.com/we-promise/sure/blob/v0.7.5-hotfix.2/config/initializers/active_record_encryption_compat.rb)
+for reading/querying old plaintext during a backfill. This bundle deliberately
+**does not forward that flag**; setting it only in Portainer has no effect.
+A populated-instance migration, its compatibility configuration and backfill
+validation are outside this bundle's supported encryption-enablement path.
+
+For installations encrypted from first use, preserve the same keys on every
+update and restore. Do not replace existing keys or assume key removal/rotation
+is a supported rollback.
 
 ## MCP access and ownership
 
