@@ -45,9 +45,13 @@ After this bundle is merged:
    `openssl rand -hex 64` for the Rails secret and `openssl rand -hex 32` for
    the database password. Empty required values fail Compose validation.
 5. Leave **both** `SURE_MCP_API_TOKEN` and `SURE_MCP_USER_EMAIL` empty initially.
-   Deploy, then create the first owner account through HTTPS. Immediately close
-   self-service registrations under **Settings → Self-Hosting → Onboarding**.
-   That onboarding setting lives in the database, not in this Compose file.
+   Deploy, then create the first owner account through HTTPS before sharing or
+   announcing the hostname. **The first registrant becomes instance super-admin**;
+   tailnet-only routing does not prevent another authorised tailnet user from
+   registering first. Keep initial access restricted to the owner, then immediately
+   close self-service registrations under **Settings → Self-Hosting → Onboarding**
+   before opening access to others. That onboarding setting lives in the database,
+   not in this Compose file.
 6. Create/invite the intended assistant's own Sure user into the appropriate
    family and grant the required application-level account access. Generate a
    separate MCP token, set both MCP variables, and redeploy through Portainer.
