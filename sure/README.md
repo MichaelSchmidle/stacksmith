@@ -32,6 +32,9 @@ Prerequisites: Docker Standalone with Compose support, an existing external
 `stacksmith` network, the standard Traefik router/middleware/certificate setup,
 and DNS pointing your chosen finance-service hostname to that tailnet router.
 Use one instance of this bundle per Docker host because names are fixed.
+**First-time encryption setup below is for fresh/empty databases only.** If an
+existing database contains unencrypted records, do not deploy this requirement;
+follow the [encryption migration stop gate](#database-field-encryption) first.
 
 After this bundle is merged:
 
@@ -43,7 +46,13 @@ After this bundle is merged:
 4. Set `SURE_HOSTNAME` (hostname only), `TZ`, `SURE_SECRET_KEY_BASE` and
    `SURE_DB_PASSWORD`. Generate independent secrets in a trusted terminal:
    `openssl rand -hex 64` for the Rails secret and `openssl rand -hex 32` for
-   the database password. Empty required values fail Compose validation.
+   the database password. Also set all three native field-encryption variables:
+   `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`,
+   `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` and
+   `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`. Run `openssl rand -hex 32`
+   independently for each. Save these recovery credentials before deployment;
+   do not generate new values during restarts or updates. Missing or empty
+   required values fail Compose validation.
 5. Leave **both** `SURE_MCP_API_TOKEN` and `SURE_MCP_USER_EMAIL` empty initially.
    Deploy, then create the first owner account through HTTPS before sharing or
    announcing the hostname. **The first registrant becomes instance super-admin**;
@@ -61,6 +70,43 @@ After this bundle is merged:
 No service is deployed and no assistant is configured merely by adding these
 files. Keep hostname, secrets and private operator details in Portainer, not Git.
 For an initial deployment, prefer manual updates until the acceptance checks pass.
+
+## Database-field encryption
+
+Both web and worker receive the same three explicit encryption keys. This enables
+the upstream application's native encryption for designated sensitive database
+fields, including user email/name, MFA secrets and supported provider tokens.
+It is not full-database, document-volume or end-to-end encryption, and does not
+protect against an application/host administrator who can retrieve the keys.
+
+Configure this before first signup. In the inspected stable release, automatic
+key derivation from `SECRET_KEY_BASE` alone does not satisfy the explicit-key
+check used to enable encrypted model fields. Require encryption readiness in
+both application processes and investigate any startup warning that encryption
+is not configured; a healthy `/up` endpoint does not prove encryption works.
+
+**Enabling encryption is supported here only on a fresh/empty instance.**
+If an existing deployment is still empty, generate and preserve the three values
+once and provision them in Portainer **before merging** if Git polling can deploy
+this requirement. Keep initial access restricted until configuration is complete.
+
+**Populated, previously unencrypted installations: stop before enabling these
+keys or allowing this Compose change to deploy.** Adding keys does not backfill
+plaintext fields: it activates encrypted reads and deterministic email lookups,
+so existing plaintext values become unreadable and existing users cannot sign in.
+Preserve the current database, image and secrets, prevent automatic redeployment,
+and require a separately validated migration and recovery procedure first.
+
+Upstream provides a temporary
+[`ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA` compatibility flag](https://github.com/we-promise/sure/blob/v0.7.5-hotfix.2/config/initializers/active_record_encryption_compat.rb)
+for reading/querying old plaintext during a backfill. This bundle deliberately
+**does not forward that flag**; setting it only in Portainer has no effect.
+A populated-instance migration, its compatibility configuration and backfill
+validation are outside this bundle's supported encryption-enablement path.
+
+For installations encrypted from first use, preserve the same keys on every
+update and restore. Do not replace existing keys or assume key removal/rotation
+is a supported rollback.
 
 ## MCP access and ownership
 
@@ -125,6 +171,10 @@ Acceptance checks:
 
 - Routed HTTPS browser sign-in works from the intended client, with registration
   closed after the owner is established; no direct app/database/Redis host ports.
+- Native encryption is configured in web and worker. In an isolated synthetic
+  fixture, confirm a designated field is ciphertext in raw PostgreSQL, readable
+  through the application after a restart with the same keys, and fails to
+  decrypt with a different key set. Never test wrong keys on the live instance.
 - Unauthenticated MCP returns 401. Authenticated `initialize`, `tools/list` and
   a read work as the intended user. Use `tools/list` as the deployed capability
   inventory; preview tools depend on that user's settings.
@@ -146,7 +196,10 @@ proof that a new image is running. Before updating:
 
 1. Record app version and exact image IDs/digests for web and worker.
 2. Stop writes and background workers; take a coherent backup of the database,
-   uploaded storage, Redis queue state, and deployment secrets/configuration.
+   uploaded storage, Redis queue state, and deployment secrets/configuration,
+   including the unchanged Rails secret and all three field-encryption keys.
+   Protect key backups separately from data backups where practical; losing
+   keys can make encrypted fields unrecoverable.
 3. Preserve the previous image artifact or a pullable digest.
 4. Redeploy both app services together and repeat health, MCP inventory and
    synthetic read/write checks. Reassess new permissions before normal agent use.
@@ -167,8 +220,9 @@ This bundle does not schedule or verify backups automatically.
 
 Restore into isolated empty volumes using the same recorded application image
 and PostgreSQL major. Restore the database with `pg_restore`, restore storage and
-Redis before starting workers, and keep the original Rails secret. Verify login,
-ledger totals, uploaded documents and queue behaviour. Do not overwrite the
+Redis before starting workers, and keep the original Rails secret and all three
+field-encryption keys. Verify login, encrypted-field readability, ledger totals,
+uploaded documents and queue behaviour. Do not overwrite the
 working instance for a restore test. Reverting an image does not undo database
 migrations: recovery may require restoring the entire pre-upgrade checkpoint.
 Never use `down -v` on an installation containing data you intend to keep.
