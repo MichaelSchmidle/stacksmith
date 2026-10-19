@@ -432,7 +432,73 @@ def validate_nemotron_prebuild_runbook() -> None:
     print("nemotron runbook: shell syntax and mocked build-only success/failure paths: OK")
 
 
+def validate_sure_contract() -> None:
+    stack = ROOT / "sure"
+    compose = stack / "docker-compose.yml"
+    required = {
+        "SURE_HOSTNAME": "finance.example.com",
+        "SURE_SECRET_KEY_BASE": "ci-placeholder",
+        "SURE_DB_PASSWORD": "ci-placeholder",
+    }
+
+    def render(**overrides: str | None) -> subprocess.CompletedProcess:
+        env = {key: value for key, value in os.environ.items()
+               if not key.startswith("SURE_") and key not in ("COMPOSE_FILE", "COMPOSE_ENV_FILES")}
+        env.update(required)
+        for key, value in overrides.items():
+            if value is None:
+                env.pop(key, None)
+            else:
+                env[key] = value
+        return subprocess.run(
+            ["docker", "compose", "--env-file", os.devnull, "-f", str(compose),
+             "config", "--format", "json"],
+            cwd=ROOT, env=env, text=True, capture_output=True,
+        )
+
+    result = render()
+    assert result.returncode == 0, result.stderr
+    config = json.loads(result.stdout)
+    services = config["services"]
+    assert set(services) == {"sure", "sure-worker", "sure-db", "sure-redis"}
+    for service in services.values():
+        assert not service.get("ports")
+        assert not service.get("privileged", False)
+        assert not any("docker.sock" in mount["target"] for mount in service.get("volumes", []))
+    for name in ("sure", "sure-worker"):
+        service = services[name]
+        assert service["image"] == "ghcr.io/we-promise/sure:stable"
+        env = service["environment"]
+        assert env["APP_URL"] == "https://finance.example.com"
+        assert env["RAILS_ASSUME_SSL"] == "true"
+        assert env["RAILS_FORCE_SSL"] == "false"
+        assert env["MCP_API_TOKEN"] == "" and env["MCP_USER_EMAIL"] == ""
+        assert not any(key in env for key in ("OPENAI_ACCESS_TOKEN", "ANTHROPIC_API_KEY"))
+    assert services["sure-worker"]["depends_on"]["sure"]["condition"] == "service_healthy"
+    assert config["networks"]["sure-backend"]["internal"] is True
+    assert set(services["sure-db"]["networks"]) == {"sure-backend"}
+    assert set(services["sure-redis"]["networks"]) == {"sure-backend"}
+    assert "stacksmith" not in services["sure-worker"]["networks"]
+    assert services["sure"]["labels"]["traefik.http.routers.sure.entrypoints"] == "websecure-tailscale"
+    assert services["sure"]["labels"]["traefik.docker.network"] == "stacksmith"
+    for name in ("storage", "db", "redis"):
+        assert config["volumes"][f"sure-{name}"]["name"] == f"stacksmith_sure_{name}"
+
+    enabled = render(SURE_MCP_API_TOKEN="ci-mcp-placeholder", SURE_MCP_USER_EMAIL="agent@example.com")
+    assert enabled.returncode == 0, enabled.stderr
+    for name in ("sure", "sure-worker"):
+        env = json.loads(enabled.stdout)["services"][name]["environment"]
+        assert env["MCP_API_TOKEN"] == "ci-mcp-placeholder"
+        assert env["MCP_USER_EMAIL"] == "agent@example.com"
+    for key in required:
+        for missing in (None, ""):
+            failed = render(**{key: missing})
+            assert failed.returncode != 0 and key in failed.stderr, f"must reject empty/missing {key}"
+    print("sure: private routing, storage, MCP opt-in, stable images and fail-closed secrets: OK")
+
+
 def main() -> None:
+    validate_sure_contract()
     validate_nemotron_spark_contract()
     validate_nemotron_prebuild_runbook()
     validate_all_compose()

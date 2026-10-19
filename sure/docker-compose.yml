@@ -1,0 +1,117 @@
+x-sure-environment: &sure-environment
+  TZ: ${TZ:-Europe/Zurich}
+  SELF_HOSTED: "true"
+  APP_URL: https://${SURE_HOSTNAME:?Set SURE_HOSTNAME}
+  APP_DOMAIN: ${SURE_HOSTNAME:?Set SURE_HOSTNAME}
+  SECRET_KEY_BASE: ${SURE_SECRET_KEY_BASE:?Set a unique SURE_SECRET_KEY_BASE}
+  RAILS_ASSUME_SSL: "true"
+  RAILS_FORCE_SSL: "false"
+  DB_HOST: sure-db
+  DB_PORT: "5432"
+  POSTGRES_DB: sure
+  POSTGRES_USER: sure
+  POSTGRES_PASSWORD: ${SURE_DB_PASSWORD:?Set SURE_DB_PASSWORD}
+  REDIS_URL: redis://sure-redis:6379/1
+  MCP_API_TOKEN: ${SURE_MCP_API_TOKEN:-}
+  MCP_USER_EMAIL: ${SURE_MCP_USER_EMAIL:-}
+
+services:
+  sure:
+    image: ghcr.io/we-promise/sure:stable
+    container_name: stacksmith_sure
+    restart: unless-stopped
+    environment: *sure-environment
+    depends_on:
+      sure-db:
+        condition: service_healthy
+      sure-redis:
+        condition: service_healthy
+    volumes:
+      - sure-storage:/rails/storage
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "--max-time", "10", "http://localhost:3000/up"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
+    networks:
+      - stacksmith
+      - sure-backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=stacksmith"
+      - "traefik.http.routers.sure.rule=Host(`${SURE_HOSTNAME:?Set SURE_HOSTNAME}`)"
+      - "traefik.http.routers.sure.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.sure.tls.certresolver=stacksmith"
+      - "traefik.http.routers.sure.middlewares=secure-headers@docker"
+      - "traefik.http.services.sure.loadbalancer.server.port=3000"
+
+  sure-worker:
+    image: ghcr.io/we-promise/sure:stable
+    container_name: stacksmith_sure_worker
+    restart: unless-stopped
+    command: ["bundle", "exec", "sidekiq"]
+    environment: *sure-environment
+    depends_on:
+      sure:
+        condition: service_healthy
+    volumes:
+      - sure-storage:/rails/storage
+    networks:
+      - sure-backend
+      - sure-egress
+    labels:
+      - "traefik.enable=false"
+
+  sure-db:
+    image: postgres:16-alpine
+    container_name: stacksmith_sure_db
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Europe/Zurich}
+      POSTGRES_DB: sure
+      POSTGRES_USER: sure
+      POSTGRES_PASSWORD: ${SURE_DB_PASSWORD:?Set SURE_DB_PASSWORD}
+    volumes:
+      - sure-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sure -d sure"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sure-backend
+    labels:
+      - "traefik.enable=false"
+
+  sure-redis:
+    image: redis:7-alpine
+    container_name: stacksmith_sure_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - sure-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sure-backend
+    labels:
+      - "traefik.enable=false"
+
+volumes:
+  sure-storage:
+    name: stacksmith_sure_storage
+  sure-db:
+    name: stacksmith_sure_db
+  sure-redis:
+    name: stacksmith_sure_redis
+
+networks:
+  stacksmith:
+    external: true
+  sure-backend:
+    internal: true
+  sure-egress:
