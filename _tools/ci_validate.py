@@ -512,7 +512,73 @@ def validate_sure_contract() -> None:
     print("sure: private routing, storage, MCP opt-in, stable images and fail-closed secrets/encryption: OK")
 
 
+def validate_buzz_storage_contract() -> None:
+    """Fence the S3 backend wiring, persistent metadata and admission defaults."""
+    stack = ROOT / "buzz"
+    required = required_env([stack / "docker-compose.yml"])
+    required.update(BUZZ_HOSTNAME="buzz.example.com", BUZZ_S3_ACCESS_KEY="ci-access",
+                    BUZZ_S3_SECRET_KEY="ci-secret", BUZZ_S3_BUCKET="ci-bucket")
+
+    def render(example: bool = False, /, **overrides: str | None) -> subprocess.CompletedProcess:
+        env = {key: value for key, value in os.environ.items()
+               if not key.startswith(("BUZZ_", "COMPOSE_"))}
+        env.update(required)
+        for key, value in overrides.items():
+            if value is None:
+                env.pop(key, None)
+            else:
+                env[key] = value
+        return subprocess.run(
+            ["docker", "compose", "--env-file", str(stack / ".env.example") if example else os.devnull,
+             "-f", str(stack / "docker-compose.yml"), "config", "--format", "json"],
+            cwd=ROOT, env=env, text=True, capture_output=True,
+        )
+
+    for example in (False, True):
+        result = render(example)
+        result.check_returncode()
+        config = json.loads(result.stdout)
+        services = config["services"]
+        assert set(services) == {"buzz-relay", "buzz-pair-relay", "buzz-postgres", "buzz-redis", "buzz-seaweedfs"}
+        relay = services["buzz-relay"]
+        store = services["buzz-seaweedfs"]
+        assert store["image"] == "chrislusf/seaweedfs:latest"
+        assert store["command"][0] == "mini"
+        for flag in ("-dir=/data", "-ip=buzz-seaweedfs", "-master.telemetry=false",
+                     "-admin.ui=false", "-webdav=false", "-s3.port.iceberg=0", "-s3.port.lance=0",
+                     "-s3.allowDeleteBucketNotEmpty=false", "-s3.autoCreateBucket=false"):
+            assert flag in store["command"], flag
+        assert not store.get("ports") and not store.get("labels")
+        assert set(store["networks"]) == {"buzz-internal"}
+        assert config["networks"]["buzz-internal"]["internal"] is True
+        assert {(mount["source"], mount["target"]) for mount in store["volumes"]} == {
+            ("buzz-seaweedfs-data", "/data"),
+        }
+        assert config["volumes"]["buzz-seaweedfs-data"]["name"] == "stacksmith_buzz_seaweedfs_data"
+        assert "buzz-minio-data" not in config["volumes"]
+        for key, name in (("AWS_ACCESS_KEY_ID", "BUZZ_S3_ACCESS_KEY"),
+                          ("AWS_SECRET_ACCESS_KEY", "BUZZ_S3_SECRET_KEY"), ("S3_BUCKET", "BUZZ_S3_BUCKET")):
+            assert store["environment"][key] == relay["environment"][name] == required[name]
+        assert store["healthcheck"]["test"] == ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8333/healthz"]
+        assert relay["depends_on"]["buzz-seaweedfs"]["condition"] == "service_healthy"
+        assert relay["environment"]["BUZZ_S3_ENDPOINT"] == "http://buzz-seaweedfs:8333"
+        assert relay["environment"]["BUZZ_S3_ADDRESSING_STYLE"] == "path"
+        assert relay["environment"]["BUZZ_GIT_CONFORMANCE_PROBE"] == "true"
+        assert "BUZZ_GIT_PROBE_WRITERS" not in relay["environment"]
+        assert "BUZZ_GIT_PROBE_ROUNDS" not in relay["environment"]
+        assert relay["healthcheck"]["start_period"] == "3m0s"
+        assert "/_readiness" in relay["healthcheck"]["test"][-1]
+        for name in ("buzz-postgres-data", "buzz-redis-data", "buzz-git-data"):
+            assert config["volumes"][name]["name"] == "stacksmith_" + name.replace("-", "_")
+    for key in ("BUZZ_S3_ACCESS_KEY", "BUZZ_S3_SECRET_KEY"):
+        for value in (None, ""):
+            failed = render(**{key: value})
+            assert failed.returncode != 0 and key in failed.stderr, (key, value)
+    print("buzz: native S3 initialization, private storage, metadata persistence and unchanged probe: OK")
+
+
 def main() -> None:
+    validate_buzz_storage_contract()
     validate_sure_contract()
     validate_nemotron_spark_contract()
     validate_nemotron_prebuild_runbook()
