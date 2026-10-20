@@ -50,7 +50,7 @@ These fill `BUZZ_GIT_HOOK_HMAC_SECRET`, `BUZZ_POSTGRES_PASSWORD`, `BUZZ_REDIS_PA
 
 ## Deployment
 
-**Existing MinIO installations: do not run these commands as an upgrade.** The new store starts empty; complete the separately planned migration below first. Disable automatic Git redeployment until cutover is approved.
+**Existing MinIO installations: do not run these commands as an upgrade.** The new store starts empty; complete the separately planned migration below first. Confirm automatic Git redeployment is disabled **before merging this change**, not only before manual deployment; otherwise merging may trigger an immediate cutover. Keep it disabled until cutover is approved.
 
 For a fresh installation:
 
@@ -78,12 +78,12 @@ The HTTPS hostname serves invite pages; the workspace UI is in Buzz Desktop. Mob
 
 ## Object storage and initialization
 
-`buzz-seaweedfs` runs the upstream `mini` all-in-one mode (master, volume server, filer and S3 gateway). This is a single-node store, not a highly available cluster. It uses the existing `BUZZ_S3_ACCESS_KEY`, `BUZZ_S3_SECRET_KEY` and `BUZZ_S3_BUCKET` inputs; `mini` creates the bucket and initializes its administrative S3 identity natively. There is no separate client/init image or generated credential file. Empty credentials fail Compose interpolation. Changing environment variables alone is not a supported rotation procedure when persisted IAM identities already exist; plan and verify credential changes separately.
+`buzz-seaweedfs` runs the upstream `mini` all-in-one mode (master, volume server, filer and S3 gateway). This is a single-node store, not a highly available cluster. It uses the existing `BUZZ_S3_ACCESS_KEY`, `BUZZ_S3_SECRET_KEY` and `BUZZ_S3_BUCKET` inputs; `mini` attempts bucket creation and initializes its administrative S3 identity natively. There is no separate client/init image or generated credential file. Empty credentials fail Compose interpolation. Changing environment variables alone is not a supported rotation procedure when persisted IAM identities already exist; plan and verify credential changes separately.
 
 - Buzz uses path-style S3 at `http://buzz-seaweedfs:8333`.
 - The whole `/data` tree persists in **`stacksmith_buzz_seaweedfs_data`**, including master state, object-volume files and filer metadata (`/data/filerldb2`). Retaining only object-volume files is not a usable backup.
 - S3 credentials are required. No anonymous bucket access is configured. Storage joins only the internal network; none of its ports have host mappings or Traefik routes. Administrative/other internal listeners are not a security boundary against a compromised peer container.
-- WebDAV, the admin UI, Iceberg, Lance and master telemetry are disabled. Recursive deletion of non-empty buckets and upload-driven auto-creation of buckets are disabled; the configured bucket is created explicitly at startup.
+- WebDAV, the admin UI, Iceberg, Lance and master telemetry are disabled. Recursive deletion of non-empty buckets and upload-driven auto-creation of buckets are disabled. Startup explicitly attempts to create the configured bucket, but failures are logged without stopping SeaweedFS or failing `/healthz`. If Buzz's conformance probe fails, check the SeaweedFS logs for bucket-creation warnings (`create bucket` or `failed to ensure buckets`); listener health alone does not prove bucket initialization succeeded.
 - The store health check uses its S3 `/healthz`. Buzz still performs its unchanged conditional-write conformance probe before serving Git. Keep `BUZZ_GIT_CONFORMANCE_PROBE=true`; never bypass it to admit a failing store. The relay health check allows a 180-second startup grace plus its normal retry budget because the probe can take several minutes. A healthy S3 listener alone does not establish Git compatibility.
 
 ## Updates
@@ -95,6 +95,8 @@ Review client/storage compatibility, take a recoverable backup, pull **all** sta
 ## Backup and restore
 
 Back up application and storage state as one write-quiesced checkpoint. Protect dumps, archives, `.env`, IAM credentials and the owner's `nsec` as sensitive data. Choose backup tooling and destinations authorized for **all** content stored in the deployment; infrastructure access does not grant permission to inspect or copy restricted channels or agent-owned data.
+
+The SeaweedFS `/data` archive also contains generated encryption key material (`.mini_kek_passphrase` and `.mini_sse_kek`) and persisted startup configuration (`mini.options`). Preserve these files with the data during restore; missing or regenerated keys can make encrypted objects unreadable. Protect the archive as both data and key material.
 
 1. Stop external writers and both relays; pause any scheduled writers. Keep Postgres running long enough to create a native custom-format dump:
 
