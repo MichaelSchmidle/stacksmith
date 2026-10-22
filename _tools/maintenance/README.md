@@ -39,7 +39,9 @@ No running application container is removed.
 
 ## Prerequisites
 
-Linux with systemd, Python 3.10+, Docker Engine and the Docker CLI; the optional
+Linux with systemd, Python 3.10+, Docker Engine and the Docker CLI. Agents with
+multiple attached networks require Engine 25+ (API 1.44+), checked before any
+stop or pull. The optional
 core host also needs Docker Compose supporting `config --hash`. The agent must
 publish `127.0.0.1:9001` for its local health check. Preserve any existing
 Tailscale Serve listener and the internal Docker network used by a same-host
@@ -82,12 +84,14 @@ is not a coordinated fleet rollout and one host's failure does not stop others.
 `--check` performs preflight without pulling or mutating Docker resources; it
 creates the local state directory/lock if absent. The normal agent path does not
 pull or recreate an already-current agent. Core-service paths pull moving tags,
-but does not recreate an unchanged image or apply a changed Compose configuration.
+but do not recreate an unchanged image or apply a changed Compose configuration.
 A normal successful no-change run verifies runtime access, not the upgrade path.
 
 ## Failure, recovery and cleanup
 
 A durable root-only journal is written before replacing an agent or core service.
+Pending routing/agent recovery runs before route-dependent update preflights.
+A pending Portainer transaction still blocks the entire run for manual repair.
 Agent failure restores the original stopped container, preserving its identity.
 Traefik failure restores the previous image tag and recreates through the same
 Compose project. Signals/timeouts trigger best-effort rollback; a crash or power

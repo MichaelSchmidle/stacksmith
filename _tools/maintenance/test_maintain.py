@@ -50,6 +50,9 @@ class FakeDocker:
             return None
         raise m.Error("container missing")
 
+    def supports_multi_network(self):
+        return True
+
     def pull(self, image):
         self.event("pull", image)
         self.images[image] = {"Id": "sha256:new", "RepoTags": [image]}
@@ -155,6 +158,23 @@ class AgentTests(unittest.TestCase):
             {"Type": "volume", "Name": "opaque-volume", "Destination": "/data"})
         with self.assertRaises(m.Error):
             self.u.agent()
+        self.assertEqual(self.d.events, [])
+
+    def test_declared_volume_backed_by_bind_is_supported(self):
+        self.d.containers["portainer_agent"]["Config"]["Volumes"] = {"/var/run/docker.sock": {}}
+        self.u.agent()
+        self.assertEqual(self.d.inspect("portainer_agent")["Config"]["Image"], "portainer/agent:2.45.3")
+
+    def test_unbacked_volume_declaration_is_rejected(self):
+        self.d.containers["portainer_agent"]["Config"]["Volumes"] = {"/unbacked": {}}
+        with self.assertRaises(m.Error):
+            self.u.agent()
+        self.assertEqual(self.d.events, [])
+
+    def test_old_engine_is_rejected_before_stopping_multi_network_agent(self):
+        with patch.object(self.d, "supports_multi_network", return_value=False):
+            with self.assertRaisesRegex(m.Error, "API 1.44"):
+                self.u.agent()
         self.assertEqual(self.d.events, [])
 
     def test_failed_create_restores_old_identity(self):
@@ -326,6 +346,35 @@ class TraefikTests(unittest.TestCase):
         self.assertEqual(self.d.inspect("stacksmith_traefik")["Image"], "sha256:traefik-old")
         self.assertFalse(any(c[0] == "pull" for c in self.calls))
 
+    def test_run_recovers_routing_before_portainer_preflight(self):
+        self.u.config["core"]["portainer_without_backup"] = True
+        self.u.save("traefik", {"pending": {"old_image": "sha256:traefik-old",
+                    "new_image": "sha256:traefik-new", "config_hash": "expected-hash"}})
+        del self.d.containers["stacksmith_traefik"]
+        def version():
+            if "stacksmith_traefik" not in self.d.containers:
+                raise m.Error("route unavailable")
+            return "2.45.3"
+        with patch.object(self.u, "server_version", side_effect=version):
+            with self.assertRaisesRegex(m.Error, "Traefik upgrade rolled back"):
+                self.u.run()
+        self.assertEqual(self.d.inspect("stacksmith_traefik")["Image"], "sha256:traefik-old")
+        self.assertFalse(any(c[0] == "pull" for c in self.calls))
+        self.assertNotIn("pending", self.u.state("traefik"))
+
+    def test_run_preserves_portainer_latch_before_any_recovery(self):
+        self.u.save("portainer", {"pending": {"phase": "failed"}})
+        self.u.save("traefik", {"pending": {"old_image": "sha256:traefik-old"}})
+        with self.assertRaisesRegex(m.Error, "manual repair"):
+            self.u.run()
+        self.assertEqual(self.calls, [])
+
+    def test_check_does_not_recover_pending_routing(self):
+        self.u.save("traefik", {"pending": {"old_image": "sha256:traefik-old"}})
+        with self.assertRaisesRegex(m.Error, "needs recovery"):
+            self.u.run(check=True)
+        self.assertEqual(self.calls, [])
+
     def test_foreign_image_is_not_rolled_back(self):
         self.u.save("traefik", {"pending": {"old_image": "sha256:traefik-old", "new_image": "sha256:traefik-new", "config_hash": "expected-hash"}})
         self.d.containers["stacksmith_traefik"]["Image"] = "sha256:foreign"
@@ -421,6 +470,12 @@ class PortainerTests(unittest.TestCase):
 
 
 class ValidationTests(unittest.TestCase):
+    def test_docker_api_multi_network_requirement(self):
+        docker = m.Docker()
+        for version, expected in [("1.43", False), ("1.44", True), ("1.56", True)]:
+            with patch.object(docker, "request", return_value={"ApiVersion": version}):
+                self.assertEqual(docker.supports_multi_network(), expected)
+
     def test_version_rejects_shell_fragments_and_prereleases(self):
         for version in ["2.45.3;id", "latest", "2.45.3-rc1", "v2.45.3", "2.45.3/../x"]:
             with self.assertRaises(m.Error):

@@ -115,6 +115,10 @@ class Docker:
     def image(self, ident) -> Any:
         return self.request("GET", "/images/" + quote(ident, safe="") + "/json", missing=True)
 
+    def supports_multi_network(self):
+        version = self.request("GET", "/version")["ApiVersion"]
+        return tuple(map(int, version.split("."))) >= (1, 44)
+
     def pull(self, image):
         command(["docker", "pull", image])
 
@@ -145,7 +149,10 @@ def agent_payload(old, version, token):
         raise Error("refusing to replace a Compose-managed agent")
     if not old["Config"]["Image"].startswith("portainer/agent:"):
         raise Error("unexpected agent image repository")
-    if old["Config"].get("Volumes") or any(m.get("Type") != "bind" for m in old.get("Mounts", [])):
+    mounts = old.get("Mounts", [])
+    binds = {m["Destination"] for m in mounts if m.get("Type") == "bind"}
+    if (any(m.get("Type") != "bind" for m in mounts)
+            or not set(old["Config"].get("Volumes") or {}) <= binds):
         raise Error("only bind-mounted standalone agents are supported; refusing volume replacement")
     payload = copy.deepcopy(old["Config"])
     payload["Image"] = "portainer/agent:" + version
@@ -308,6 +315,9 @@ class Updater:
         version_tuple(current)
         target = self.server_version()
         payload = agent_payload(old, target, uuid.uuid4().hex)
+        if (len(payload["NetworkingConfig"]["EndpointsConfig"]) > 1
+                and not self.docker.supports_multi_network()):
+            raise Error("multi-network agents require Docker Engine 25+ (API 1.44+)")
         if not old["State"]["Running"] or not self.agent_health(current):
             raise Error("existing agent is stopped or unhealthy")
         if version_tuple(target) < version_tuple(current):
@@ -349,6 +359,21 @@ class Updater:
         self.recover_agent()
         self.clean_images("agent", "portainer/agent", new["Image"])
         log("agent: upgraded and locally verified (" + target + ")")
+
+    def run(self, *, check=False):
+        # Recover routing before any HTTPS-dependent preflight. A pending Server
+        # migration remains an unconditional manual-repair gate.
+        if self.state("portainer").get("pending"):
+            raise Error("Portainer upgrade needs manual repair/verification; no database downgrade attempted")
+        if "core" in self.config and self.state("traefik").get("pending"):
+            self.traefik(check=check)
+        if self.state("agent").get("pending"):
+            if check:
+                raise Error("pending agent transaction needs recovery")
+            self.recover_agent()
+        self.portainer(check=check)
+        self.traefik(check=check)
+        self.agent(check=check)
 
     def compose(self, *args):
         t = self.config["core"]
@@ -488,9 +513,7 @@ def main():
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise Error("another maintenance run is active")
-        updater.portainer(check=args.check)
-        updater.traefik(check=args.check)
-        updater.agent(check=args.check)
+        updater.run(check=args.check)
     log("maintenance: completed" + (" (check only)" if args.check else ""))
 
 
