@@ -1,0 +1,11 @@
+{
+  "status_url": "https://management.example.com/api/status",
+  "traefik": {
+    "directory": "/srv/stacksmith",
+    "project": "stacksmith",
+    "files": [
+      "/srv/stacksmith/docker-compose.yml",
+      "/srv/stacksmith/traefik/docker-compose.yml"
+    ]
+  }
+}

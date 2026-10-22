@@ -60,6 +60,9 @@ jobs:
             shellcheck --severity=error "${shell_files[@]}"
           fi
 
+      - name: Test host-local infrastructure maintenance
+        run: python3 -m unittest discover -s _tools/maintenance -v
+
       - name: Validate Compose and Qwen template behavior
         run: python3 _tools/ci_validate.py
 

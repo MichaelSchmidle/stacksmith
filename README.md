@@ -129,6 +129,11 @@ Primary access method for all services via Tailscale VPN. Optional JumpCloud OAu
 
 ## Service Management
 
+For opt-in host-local agent updates and targeted core-host Traefik updates, see
+[Infrastructure maintenance](_tools/maintenance/README.md). Portainer Server
+self-updates require separately arranged recovery coverage and are not enabled by
+that tool.
+
 ### Common Commands
 
 ```bash

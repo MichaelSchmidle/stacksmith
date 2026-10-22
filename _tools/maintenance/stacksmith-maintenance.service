@@ -1,0 +1,33 @@
+[Unit]
+Description=Host-local Stacksmith infrastructure image maintenance
+Wants=network-online.target
+After=network-online.target docker.service tailscaled.service
+Requires=docker.service
+ConditionPathExists=/etc/stacksmith-maintenance.json
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/bin/python3 /usr/local/libexec/stacksmith-maintenance.py
+StateDirectory=stacksmith-maintenance
+StateDirectoryMode=0700
+RuntimeDirectory=stacksmith-maintenance
+RuntimeDirectoryMode=0700
+UMask=0077
+Environment=HOME=/var/lib/stacksmith-maintenance
+TimeoutStartSec=15min
+TimeoutStopSec=8min
+Restart=no
+MemoryMax=512M
+CPUQuota=50%
+TasksMax=128
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
