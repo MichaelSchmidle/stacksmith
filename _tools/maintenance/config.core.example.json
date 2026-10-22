@@ -1,8 +1,9 @@
 {
   "status_url": "https://management.example.com/api/status",
-  "traefik": {
+  "core": {
     "directory": "/srv/stacksmith",
     "project": "stacksmith",
+    "portainer_without_backup": true,
     "files": [
       "/srv/stacksmith/docker-compose.yml",
       "/srv/stacksmith/traefik/docker-compose.yml"

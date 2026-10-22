@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Host-local Portainer Agent and optional Compose-managed Traefik maintenance.
+"""Host-local Portainer Agent and optional Compose-managed core maintenance.
 
 No SSH, API credentials, volume backups, workload inventories or global pruning.
-Portainer Server self-updates are deliberately excluded pending recovery coverage.
+Portainer Server updates require explicit acceptance of no database rollback.
 """
 from __future__ import annotations
 
@@ -42,17 +42,20 @@ def version_tuple(value):
 
 
 def validate_config(config):
-    if not isinstance(config, dict) or set(config) - {"status_url", "traefik"}:
+    if not isinstance(config, dict) or set(config) - {"status_url", "core"}:
         raise Error("unknown maintenance configuration keys")
     u = urlsplit(config.get("status_url", ""))
     if u.scheme != "https" or not u.hostname or u.username or u.password or u.query or u.fragment:
         raise Error("status_url must be HTTPS without credentials, query or fragment")
     if u.path != "/api/status":
         raise Error("status_url must point to /api/status")
-    if "traefik" in config:
-        t = config["traefik"]
-        if not isinstance(t, dict) or set(t) != {"directory", "project", "files"}:
-            raise Error("traefik needs directory, project and files")
+    if "core" in config:
+        t = config["core"]
+        if (not isinstance(t, dict) or set(t) - {"directory", "project", "files", "portainer_without_backup"}
+                or not {"directory", "project", "files"} <= set(t)):
+            raise Error("core needs directory, project and files")
+        if not isinstance(t.get("portainer_without_backup", False), bool):
+            raise Error("portainer_without_backup must be an explicit boolean")
         if not Path(t["directory"]).is_absolute() or not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", t["project"]):
             raise Error("invalid Compose project or directory")
         if not t["files"] or any(not Path(p).is_absolute() for p in t["files"]):
@@ -142,6 +145,8 @@ def agent_payload(old, version, token):
         raise Error("refusing to replace a Compose-managed agent")
     if not old["Config"]["Image"].startswith("portainer/agent:"):
         raise Error("unexpected agent image repository")
+    if old["Config"].get("Volumes") or any(m.get("Type") != "bind" for m in old.get("Mounts", [])):
+        raise Error("only bind-mounted standalone agents are supported; refusing volume replacement")
     payload = copy.deepcopy(old["Config"])
     payload["Image"] = "portainer/agent:" + version
     if payload.get("Hostname") == old["Id"][:12]:
@@ -346,35 +351,43 @@ class Updater:
         log("agent: upgraded and locally verified (" + target + ")")
 
     def compose(self, *args):
-        t = self.config["traefik"]
+        t = self.config["core"]
         argv = ["docker", "compose", "--project-directory", t["directory"], "-p", t["project"]]
         for f in t["files"]:
             argv += ["-f", f]
         return command(argv + list(args), cwd=t["directory"])
 
-    def traefik_container(self):
-        c = self.docker.inspect("stacksmith_traefik")
+    def core_hash(self, service):
+        services = set(self.compose("config", "--services").split())
+        if not services <= {"traefik", "portainer"} or service not in services:
+            raise Error("core Compose project contains unexpected services")
+        hashes = self.compose("config", "--hash", service).split()
+        if len(hashes) != 2 or hashes[0] != service:
+            raise Error("cannot establish core Compose configuration hash")
+        return hashes[1]
+
+    def core_container(self, service, *, missing=False) -> Any:
+        c = self.docker.inspect("stacksmith_" + service, missing=missing)
+        if c is None:
+            return None
         labels = c["Config"].get("Labels") or {}
-        t = self.config["traefik"]
+        t = self.config["core"]
         if (labels.get("com.docker.compose.project") != t["project"]
-                or labels.get("com.docker.compose.service") != "traefik"
+                or labels.get("com.docker.compose.service") != service
                 or labels.get("com.docker.compose.project.working_dir") != t["directory"]
                 or labels.get("com.docker.compose.project.config_files") != ",".join(t["files"])):
-            raise Error("Traefik Compose ownership does not match configuration")
-        if c["Config"]["Image"] != "traefik:latest":
-            raise Error("Traefik automation expects the existing moving latest policy")
-        services = set(self.compose("config", "--services").split())
-        if not services <= {"traefik", "portainer"} or "traefik" not in services:
-            raise Error("core Compose project contains unexpected services")
-        hashes = self.compose("config", "--hash", "traefik").split()
-        if len(hashes) != 2 or hashes[0] != "traefik" or hashes[1] != labels.get("com.docker.compose.config-hash"):
-            raise Error("Traefik configuration changed; reconcile it manually before image updates")
+            raise Error(service + ": Compose ownership does not match configuration")
+        ref = "traefik:latest" if service == "traefik" else "portainer/portainer-ce:latest"
+        if c["Config"]["Image"] != ref:
+            raise Error(service + ": automation expects the existing moving latest policy")
+        if self.core_hash(service) != labels.get("com.docker.compose.config-hash"):
+            raise Error(service + ": configuration changed; reconcile it manually before image updates")
         return c
 
-    def wait_core(self, image):
+    def wait_core(self, image, service="traefik"):
         for _ in range(20):
             try:
-                c = self.docker.inspect("stacksmith_traefik")
+                c = self.docker.inspect("stacksmith_" + service)
                 if c["State"]["Running"] and c["Image"] == image:
                     self.server_version()  # Exercises HTTPS routing and the Portainer application.
                     return True
@@ -385,8 +398,12 @@ class Updater:
 
     def rollback_traefik(self, state):
         txn = state["pending"]
-        c = self.traefik_container()
-        if c["Image"] not in (txn["old_image"], txn["new_image"]):
+        # Compose can remove the old container before failing to create its
+        # replacement. Validate saved ownership/configuration even when absent.
+        c = self.core_container("traefik", missing=True)
+        if self.core_hash("traefik") != txn["config_hash"]:
+            raise Error("Traefik configuration changed; refusing automatic rollback")
+        if c and c["Image"] not in (txn["old_image"], txn["new_image"]):
             raise Error("Traefik image changed externally; refusing automatic rollback")
         command(["docker", "image", "tag", txn["old_image"], "traefik:latest"])
         self.compose("up", "-d", "--no-deps", "--pull", "never", "traefik")
@@ -396,45 +413,59 @@ class Updater:
         self.save("traefik", state)
         raise Error("Traefik upgrade rolled back; retry on next run")
 
+    def portainer(self, *, check=False):
+        if self.config.get("core", {}).get("portainer_without_backup", False):
+            self.core_update("portainer", check=check)
+
     def traefik(self, *, check=False):
-        if "traefik" not in self.config:
-            return
-        state = self.state("traefik")
+        if "core" in self.config:
+            self.core_update("traefik", check=check)
+
+    def core_update(self, service, *, check=False):
+        state = self.state(service)
         if state.get("pending"):
+            if service == "portainer":
+                raise Error("Portainer upgrade needs manual repair/verification; no database downgrade attempted")
             if check:
                 raise Error("pending Traefik transaction needs recovery")
             self.rollback_traefik(state)
-        old = self.traefik_container()
+        old = self.core_container(service)
         if not old["State"]["Running"]:
-            raise Error("Traefik was intentionally stopped or is unhealthy")
+            raise Error(service + ": intentionally stopped or unhealthy")
         self.server_version()
         if check:
-            log("traefik: ownership, configuration and HTTPS route verified (check only)")
+            log(service + ": ownership, configuration and HTTPS route verified (check only)")
             return
-        self.compose("pull", "--policy", "always", "traefik")
-        candidate = self.docker.image("traefik:latest")["Id"]
+        self.compose("pull", "--policy", "always", service)
+        ref = old["Config"]["Image"]
+        repository = ref.rsplit(":", 1)[0]
+        candidate = self.docker.image(ref)["Id"]
         if candidate == old["Image"]:
-            log("traefik: healthy; image unchanged")
+            log(service + ": healthy; image unchanged")
             if state:
-                self.clean_images("traefik", "traefik", candidate)
+                self.clean_images(service, repository, candidate)
             return
-        if self.traefik_container()["Id"] != old["Id"]:
-            raise Error("Traefik changed during pull")
-        state["pending"] = {"old_image": old["Image"], "new_image": candidate}
-        self.save("traefik", state)
+        if self.core_container(service)["Id"] != old["Id"]:
+            raise Error(service + ": changed during pull")
+        state["pending"] = {"old_image": old["Image"], "new_image": candidate,
+                            "config_hash": old["Config"]["Labels"]["com.docker.compose.config-hash"]}
+        self.save(service, state)
         try:
-            self.compose("up", "-d", "--no-deps", "--pull", "never", "traefik")
-            if not self.wait_core(candidate):
-                raise Error("Traefik replacement failed HTTPS health verification")
+            self.compose("up", "-d", "--no-deps", "--pull", "never", service)
+            if not self.wait_core(candidate, service):
+                raise Error(service + ": replacement failed HTTPS health verification")
         except Exception:
-            self.rollback_traefik(state)
-            raise
-        self.remember_previous("traefik", old["Image"])
-        state = self.state("traefik")
+            if service == "traefik":
+                self.rollback_traefik(state)
+            state["pending"]["phase"] = "failed"
+            self.save(service, state)
+            raise Error("Portainer upgrade failed; stopped for manual repair, no database downgrade attempted")
+        self.remember_previous(service, old["Image"])
+        state = self.state(service)
         state.pop("pending")
-        self.save("traefik", state)
-        self.clean_images("traefik", "traefik", candidate)
-        log("traefik: upgraded; HTTPS Portainer route verified")
+        self.save(service, state)
+        self.clean_images(service, repository, candidate)
+        log(service + ": upgraded; HTTPS Portainer route verified")
 
 
 def main():
@@ -457,6 +488,7 @@ def main():
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise Error("another maintenance run is active")
+        updater.portainer(check=args.check)
         updater.traefik(check=args.check)
         updater.agent(check=args.check)
     log("maintenance: completed" + (" (check only)" if args.check else ""))

@@ -15,16 +15,20 @@ Merging this tool does not itself deploy it or change any Compose service.
   `portainer_agent`, using an explicit stable `portainer/agent:X.Y.Z` image. Match
   the running server version from its configured HTTPS `/api/status` endpoint.
   Refuse automatic downgrades, stopped/unhealthy agents, unexpected repositories,
-  Compose-managed agents, concurrent runs and untracked rollback containers.
+  Compose-managed agents, volume-mounted agents (bind mounts only), concurrent
+  runs and untracked rollback containers.
 - **Optional Traefik:** only `stacksmith_traefik`, using its existing
   `traefik:latest` image and canonical local Compose project. The project must
   contain only `portainer` and `traefik`; recorded ownership and the rendered
   Traefik configuration hash must match. Pull only Traefik, recreate it with
   `--no-deps --pull never`, and verify the HTTPS Portainer application route.
-- **Portainer Server is deliberately not auto-updated by this tool.** Server
-  updates can migrate persistent data. Arrange owner-managed, tested recovery
-  coverage before adding this capability; retaining an old image is not enough.
-  This tool never reads, copies or backs up the Portainer data volume.
+- **Optional Portainer Server:** `stacksmith_portainer`, using its existing
+  `portainer/portainer-ce:latest` image and the same canonical Compose project.
+  Set `core.portainer_without_backup` to `true` only when the operator explicitly
+  accepts running without an updater-managed recovery backup. The job updates
+  Portainer first, then Traefik, then its local agent. Server failure stops the
+  job for manual repair: it never automatically downgrades a possibly migrated
+  database. This tool never reads, copies or backs up the Portainer data volume.
 
 Agent discovery uses one named container, not a daemon-wide container listing.
 State contains image/container IDs and transaction metadata, not environment
@@ -71,25 +75,30 @@ sudo systemctl enable --now stacksmith-maintenance.timer
 
 Daily at 04:00 UTC plus up to 15 minutes jitter by default. `Persistent=true` runs a
 missed occurrence after the timer returns. To choose a different schedule, use a
-timer drop-in and reset `OnCalendar=` before specifying its replacement. If server
-automation is later added, schedule the core host before agent-only hosts; this
+timer drop-in and reset `OnCalendar=` before specifying its replacement. Schedule
+the core host before agent-only hosts when server updates are enabled; this
 is not a coordinated fleet rollout and one host's failure does not stop others.
 
 `--check` performs preflight without pulling or mutating Docker resources; it
 creates the local state directory/lock if absent. The normal agent path does not
-pull or recreate an already-current agent. The Traefik path pulls its moving tag,
+pull or recreate an already-current agent. Core-service paths pull moving tags,
 but does not recreate an unchanged image or apply a changed Compose configuration.
 A normal successful no-change run verifies runtime access, not the upgrade path.
 
 ## Failure, recovery and cleanup
 
-A durable root-only journal is written before replacing an agent or Traefik.
+A durable root-only journal is written before replacing an agent or core service.
 Agent failure restores the original stopped container, preserving its identity.
 Traefik failure restores the previous image tag and recreates through the same
 Compose project. Signals/timeouts trigger best-effort rollback; a crash or power
 loss can require the next invocation to recover. A recovery invocation reports
 failure after rollback rather than immediately retrying the same upgrade.
-Do not promise uninterrupted management/routing or guaranteed rollback from this.
+Portainer Server is different: a failed or interrupted update leaves a pending
+journal and blocks further automated work, without launching an older image.
+Repair/verify it manually at a database-compatible version; preserve the journal
+as evidence, then explicitly resolve its pending entry only after checking the
+canonical Compose ownership and HTTPS application response. An old cached image
+is not a database backup. Do not promise uninterrupted routing or guaranteed rollback.
 
 After successful health verification, remove only the stopped transaction-owned
 agent rollback container, with no volume deletion. Retain the previous image for
@@ -133,6 +142,8 @@ python3 -m unittest discover -s _tools/maintenance -v
 The deterministic suite uses a fake Docker model, not production data. It covers
 version/input validation, no-op/check behavior, mount/network preservation,
 upgrade failure, journal recovery, ownership conflicts, scoped cleanup, Compose
-ownership/configuration guards, targeted recreation and Traefik rollback.
+ownership/configuration guards, targeted recreation, Traefik rollback with a
+missing replacement, anonymous-volume refusal and Portainer failure latching
+without a database downgrade.
 Live preflight/timer execution, actual image replacement and failure-injection
 coverage must be reported separately; unit tests are not fleet deployment proof.

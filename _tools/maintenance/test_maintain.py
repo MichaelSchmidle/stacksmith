@@ -21,6 +21,7 @@ def container(name="portainer_agent", image="portainer/agent:2.45.2", ident="old
             "HostConfig": {"NetworkMode": "bridge", "RestartPolicy": {"Name": "always"},
                            "PortBindings": {"9001/tcp": [{"HostIp": "127.0.0.1", "HostPort": "9001"}]},
                            "Binds": ["/var/run/docker.sock:/var/run/docker.sock"]},
+            "Mounts": [{"Type": "bind", "Source": "/var/run/docker.sock", "Destination": "/var/run/docker.sock"}],
             "NetworkSettings": {"Networks": {"bridge": {"Aliases": None},
                                             "stacksmith": {"Aliases": ["portainer_agent", ident[:12]],
                                                            "IPAMConfig": None, "IPAddress": "172.20.0.8"}}}}
@@ -149,6 +150,13 @@ class AgentTests(unittest.TestCase):
             self.u.agent()
         self.assertEqual(self.d.events, [])
 
+    def test_anonymous_volume_is_rejected_without_replacement(self):
+        self.d.containers["portainer_agent"]["Mounts"].append(
+            {"Type": "volume", "Name": "opaque-volume", "Destination": "/data"})
+        with self.assertRaises(m.Error):
+            self.u.agent()
+        self.assertEqual(self.d.events, [])
+
     def test_failed_create_restores_old_identity(self):
         self.d.fail = "create"
         with self.assertRaises(m.Error):
@@ -227,11 +235,12 @@ class TraefikTests(unittest.TestCase):
         self.d.containers["stacksmith_traefik"] = c
         self.d.images["traefik:latest"] = {"Id": "sha256:traefik-new"}
         self.u = m.Updater({"status_url": "https://management.example.com/api/status",
-                            "traefik": {"directory": "/srv/stacksmith", "project": "stacksmith",
+                            "core": {"directory": "/srv/stacksmith", "project": "stacksmith",
                                         "files": ["/srv/stacksmith/docker-compose.yml", "/srv/stacksmith/traefik/docker-compose.yml"]}},
                            pathlib.Path(self.tmp.name), docker=self.d)
         self.calls = []
         self.fail_up = False
+        self.remove_before_failure = False
         self.extra_service = False
         self.hash = "expected-hash"
         def compose(*args):
@@ -243,7 +252,11 @@ class TraefikTests(unittest.TestCase):
             if args[0] == "up":
                 if self.fail_up:
                     self.fail_up = False
+                    if self.remove_before_failure:
+                        del self.d.containers["stacksmith_traefik"]
                     raise m.Error("injected up failure")
+                if "stacksmith_traefik" not in self.d.containers:
+                    self.d.containers["stacksmith_traefik"] = copy.deepcopy(c)
                 self.d.containers["stacksmith_traefik"]["Image"] = self.d.images["traefik:latest"]["Id"]
             return ""
         patch.object(self.u, "compose", side_effect=compose).start()
@@ -298,8 +311,15 @@ class TraefikTests(unittest.TestCase):
                 self.u.traefik()
         self.assertEqual(self.d.inspect("stacksmith_traefik")["Image"], "sha256:traefik-old")
 
+    def test_failed_recreate_after_old_container_removal_still_restores_service(self):
+        self.fail_up = self.remove_before_failure = True
+        with self.assertRaises(m.Error):
+            self.u.traefik()
+        self.assertEqual(self.d.inspect("stacksmith_traefik")["Image"], "sha256:traefik-old")
+        self.assertNotIn("pending", self.u.state("traefik"))
+
     def test_pending_transaction_is_recovered_before_new_pull(self):
-        self.u.save("traefik", {"pending": {"old_image": "sha256:traefik-old", "new_image": "sha256:traefik-new"}})
+        self.u.save("traefik", {"pending": {"old_image": "sha256:traefik-old", "new_image": "sha256:traefik-new", "config_hash": "expected-hash"}})
         self.d.containers["stacksmith_traefik"]["Image"] = "sha256:traefik-new"
         with self.assertRaises(m.Error):
             self.u.traefik()
@@ -307,11 +327,97 @@ class TraefikTests(unittest.TestCase):
         self.assertFalse(any(c[0] == "pull" for c in self.calls))
 
     def test_foreign_image_is_not_rolled_back(self):
-        self.u.save("traefik", {"pending": {"old_image": "sha256:traefik-old", "new_image": "sha256:traefik-new"}})
+        self.u.save("traefik", {"pending": {"old_image": "sha256:traefik-old", "new_image": "sha256:traefik-new", "config_hash": "expected-hash"}})
         self.d.containers["stacksmith_traefik"]["Image"] = "sha256:foreign"
         with self.assertRaises(m.Error):
             self.u.traefik()
         self.assertFalse(any(c[0] == "up" for c in self.calls))
+
+
+class PortainerTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.d = FakeDocker()
+        self.paths = ["/srv/stacksmith/docker-compose.yml", "/srv/stacksmith/traefik/docker-compose.yml"]
+        old = container("stacksmith_portainer", "portainer/portainer-ce:latest", "server-old")
+        old["Config"]["Labels"] = {"com.docker.compose.project": "stacksmith",
+                                   "com.docker.compose.service": "portainer",
+                                   "com.docker.compose.project.working_dir": "/srv/stacksmith",
+                                   "com.docker.compose.project.config_files": ",".join(self.paths),
+                                   "com.docker.compose.config-hash": "server-hash"}
+        self.d.containers["stacksmith_portainer"] = old
+        self.d.images["portainer/portainer-ce:latest"] = {"Id": "sha256:server-new"}
+        self.u = m.Updater({"status_url": "https://management.example.com/api/status",
+                            "core": {"directory": "/srv/stacksmith", "project": "stacksmith",
+                                     "files": self.paths, "portainer_without_backup": True}},
+                           pathlib.Path(self.tmp.name), docker=self.d)
+        self.calls = []
+        self.fail_up = False
+        def compose(*args):
+            self.calls.append(args)
+            if args == ("config", "--services"):
+                return "portainer\ntraefik"
+            if args == ("config", "--hash", "portainer"):
+                return "portainer server-hash"
+            if args[0] == "up":
+                if self.fail_up:
+                    del self.d.containers["stacksmith_portainer"]
+                    raise m.Error("failed after old container removal")
+                self.d.containers["stacksmith_portainer"]["Image"] = self.d.images["portainer/portainer-ce:latest"]["Id"]
+            return ""
+        patch.object(self.u, "compose", side_effect=compose).start()
+        patch.object(self.u, "server_version", return_value="2.45.3").start()
+        self.cmd = patch.object(m, "command").start()
+        patch.object(m.time, "sleep").start()
+        self.addCleanup(patch.stopall)
+
+    def test_server_updates_only_with_explicit_risk_opt_in(self):
+        self.u.config["core"].pop("portainer_without_backup")
+        self.u.portainer()
+        self.assertEqual(self.calls, [])
+
+    def test_server_upgrade_preserves_existing_compose_ownership_without_volume_operations(self):
+        self.u.portainer()
+        self.assertIn(("up", "-d", "--no-deps", "--pull", "never", "portainer"), self.calls)
+        self.assertEqual(self.d.inspect("stacksmith_portainer")["Config"]["Labels"]["com.docker.compose.project"], "stacksmith")
+        self.assertEqual(self.u.state("portainer")["previous_image"], "sha256:server-old")
+        self.assertNotIn("pending", self.u.state("portainer"))
+        self.assertEqual(self.d.events, [])
+
+    def test_failed_upgrade_latches_without_image_or_database_downgrade(self):
+        self.fail_up = True
+        with self.assertRaises(m.Error):
+            self.u.portainer()
+        self.assertEqual(self.u.state("portainer")["pending"]["phase"], "failed")
+        self.cmd.assert_not_called()
+        calls = list(self.calls)
+        with self.assertRaises(m.Error):
+            self.u.portainer()
+        self.assertEqual(self.calls, calls)
+
+    def test_failed_https_health_does_not_downgrade_server(self):
+        with patch.object(self.u, "wait_core", return_value=False):
+            with self.assertRaises(m.Error):
+                self.u.portainer()
+        self.assertEqual(self.d.inspect("stacksmith_portainer")["Image"], "sha256:server-new")
+        self.assertIn("pending", self.u.state("portainer"))
+        self.cmd.assert_not_called()
+
+    def test_interrupted_upgrade_requires_operator_verification(self):
+        self.u.save("portainer", {"pending": {"old_image": "sha256:server-old", "new_image": "sha256:server-new"}})
+        with self.assertRaises(m.Error):
+            self.u.portainer()
+        self.assertEqual(self.calls, [])
+
+    def test_unchanged_server_image_is_not_recreated(self):
+        self.d.images["portainer/portainer-ce:latest"]["Id"] = "sha256:server-old"
+        self.u.portainer()
+        self.assertFalse(any(c[0] == "up" for c in self.calls))
+
+    def test_check_does_not_pull_or_recreate_server(self):
+        self.u.portainer(check=True)
+        self.assertFalse(any(c[0] in ("pull", "up") for c in self.calls))
 
 
 class ValidationTests(unittest.TestCase):
