@@ -142,7 +142,7 @@ class Docker:
         self.request("DELETE", "/images/" + quote(ident, safe="") + "?force=false&noprune=true")
 
 
-def agent_payload(old, version, token):
+def agent_payload(old, version, token, image_config):
     version_tuple(version)
     labels = old["Config"].get("Labels") or {}
     if any(k.startswith("com.docker.compose.") for k in labels):
@@ -154,7 +154,26 @@ def agent_payload(old, version, token):
     if (any(m.get("Type") != "bind" for m in mounts)
             or not set(old["Config"].get("Volumes") or {}) <= binds):
         raise Error("only bind-mounted standalone agents are supported; refusing volume replacement")
+    if not isinstance(image_config, dict):
+        raise Error("cannot establish the running agent image defaults")
     payload = copy.deepcopy(old["Config"])
+    # Inspect merges image defaults with container overrides. Do not freeze the
+    # old image's execution settings into every future replacement. Explicit
+    # values equal to image defaults are indistinguishable from inheritance.
+    for key in ("Entrypoint", "Cmd", "WorkingDir", "User", "StopSignal",
+                "StopTimeout", "Healthcheck", "Shell", "ArgsEscaped"):
+        if key in image_config and payload.get(key) == image_config[key]:
+            payload.pop(key, None)
+    inherited_env = {item.split("=", 1)[0]: item for item in image_config.get("Env") or []}
+    overrides = [item for item in payload.get("Env") or []
+                 if inherited_env.get(item.split("=", 1)[0]) != item]
+    if overrides:
+        payload["Env"] = overrides
+    else:
+        payload.pop("Env", None)
+    image_labels = image_config.get("Labels") or {}
+    labels = {key: value for key, value in labels.items()
+              if key not in image_labels or image_labels[key] != value}
     payload["Image"] = "portainer/agent:" + version
     if payload.get("Hostname") == old["Id"][:12]:
         payload.pop("Hostname")
@@ -314,7 +333,10 @@ class Updater:
         current = image.split(":", 1)[1]
         version_tuple(current)
         target = self.server_version()
-        payload = agent_payload(old, target, uuid.uuid4().hex)
+        old_image = self.docker.image(old["Image"])
+        if not old_image or not isinstance(old_image.get("Config"), dict):
+            raise Error("cannot establish the running agent image defaults")
+        payload = agent_payload(old, target, uuid.uuid4().hex, old_image["Config"])
         if (len(payload["NetworkingConfig"]["EndpointsConfig"]) > 1
                 and not self.docker.supports_multi_network()):
             raise Error("multi-network agents require Docker Engine 25+ (API 1.44+)")

@@ -32,7 +32,9 @@ class FakeDocker:
         self.containers = {"portainer_agent": container()}
         self.events = []
         self.fail: str | None = None
-        self.images: dict[str, dict[str, Any]] = {"sha256:old": {"RepoTags": ["portainer/agent:2.45.2"]}}
+        self.images: dict[str, dict[str, Any]] = {"sha256:old": {
+            "RepoTags": ["portainer/agent:2.45.2"], "Config": {"Env": ["PATH=/bin"], "Labels": {}}}}
+        self.next_config = {"Env": ["PATH=/bin"], "Labels": {}}
 
     def event(self, op, *args):
         self.events.append((op, *args))
@@ -55,7 +57,8 @@ class FakeDocker:
 
     def pull(self, image):
         self.event("pull", image)
-        self.images[image] = {"Id": "sha256:new", "RepoTags": [image]}
+        candidate = {"Id": "sha256:new", "RepoTags": [image], "Config": copy.deepcopy(self.next_config)}
+        self.images[image] = self.images["sha256:new"] = candidate
 
     def image(self, image):
         return self.images[image]
@@ -80,8 +83,14 @@ class FakeDocker:
     def create(self, name, payload):
         self.event("create", name)
         c = container(name, payload["Image"], "new")
-        c["Config"] = {k: copy.deepcopy(v) for k, v in payload.items()
-                       if k not in ("HostConfig", "NetworkingConfig")}
+        defaults = copy.deepcopy(self.images.get(payload["Image"], {}).get("Config", self.next_config))
+        explicit = {k: copy.deepcopy(v) for k, v in payload.items()
+                    if k not in ("HostConfig", "NetworkingConfig")}
+        c["Config"] = {**defaults, **explicit}
+        env = dict(item.split("=", 1) for item in defaults.get("Env") or [])
+        env.update(item.split("=", 1) for item in explicit.get("Env") or [])
+        c["Config"]["Env"] = [key + "=" + value for key, value in env.items()]
+        c["Config"]["Labels"] = {**(defaults.get("Labels") or {}), **(explicit.get("Labels") or {})}
         c["HostConfig"] = copy.deepcopy(payload["HostConfig"])
         c["NetworkSettings"]["Networks"] = copy.deepcopy(payload["NetworkingConfig"]["EndpointsConfig"])
         c["State"]["Running"] = False
@@ -125,6 +134,55 @@ class AgentTests(unittest.TestCase):
         self.assertNotIn("old", now["NetworkSettings"]["Networks"]["stacksmith"]["Aliases"])
         self.assertFalse(self.d.inspect(m.BACKUP, missing=True))
         self.assertEqual(self.u.state("agent")["previous_image"], "sha256:old")
+
+    def test_new_image_execution_and_environment_defaults_are_inherited(self):
+        defaults = {"Entrypoint": ["/old-agent"], "Cmd": ["old-mode"], "WorkingDir": "/old",
+                    "User": "1000", "StopSignal": "SIGINT", "Env": ["PATH=/old", "REMOVED=old"]}
+        self.d.containers["portainer_agent"]["Config"].update(copy.deepcopy(defaults))
+        self.d.images["sha256:old"]["Config"].update(copy.deepcopy(defaults))
+        self.d.next_config.update({"Entrypoint": ["/new-agent"], "Cmd": ["new-mode"],
+                                   "WorkingDir": "/new", "User": "2000", "StopSignal": "SIGTERM",
+                                   "Env": ["PATH=/new", "ADDED=new"]})
+        self.u.agent()
+        now = self.d.inspect("portainer_agent")["Config"]
+        for field in ("Entrypoint", "Cmd", "WorkingDir", "User", "StopSignal", "Env"):
+            self.assertEqual(now[field], self.d.next_config[field], field)
+
+    def test_image_revision_labels_are_refreshed_and_operator_labels_retained(self):
+        inherited = {"git_commit": "old", "org.opencontainers.image.revision": "old", "removed": "old"}
+        self.d.images["sha256:old"]["Config"]["Labels"] = copy.deepcopy(inherited)
+        self.d.containers["portainer_agent"]["Config"]["Labels"] = {**inherited, "operator": "retained"}
+        self.d.next_config["Labels"] = {"git_commit": "new", "org.opencontainers.image.revision": "new"}
+        self.u.agent()
+        labels = self.d.inspect("portainer_agent")["Config"]["Labels"]
+        self.assertEqual(labels["git_commit"], "new")
+        self.assertEqual(labels["org.opencontainers.image.revision"], "new")
+        self.assertEqual(labels["operator"], "retained")
+        self.assertNotIn("removed", labels)
+        self.assertIn(m.TXN_LABEL, labels)
+
+    def test_operator_overrides_survive_new_image_defaults(self):
+        self.d.images["sha256:old"]["Config"].update({"Entrypoint": ["/old"], "Cmd": ["old"],
+            "WorkingDir": "/old", "Env": ["PATH=/old", "MODE=old"], "Labels": {"revision": "old"}})
+        custom = {"Entrypoint": ["/operator"], "Cmd": ["custom"], "WorkingDir": "/custom",
+                  "Env": ["PATH=/custom", "MODE=custom", "TOKEN=x=y"], "Labels": {"revision": "override"}}
+        self.d.containers["portainer_agent"]["Config"].update(copy.deepcopy(custom))
+        self.d.next_config.update({"Entrypoint": ["/new"], "Cmd": ["new"], "WorkingDir": "/new",
+            "Env": ["PATH=/new", "MODE=new", "ADDED=new"], "Labels": {"revision": "new", "added": "new"}})
+        self.u.agent()
+        now = self.d.inspect("portainer_agent")["Config"]
+        for field in ("Entrypoint", "Cmd", "WorkingDir"):
+            self.assertEqual(now[field], custom[field])
+        self.assertEqual(dict(x.split("=", 1) for x in now["Env"]),
+                         {"PATH": "/custom", "MODE": "custom", "TOKEN": "x=y", "ADDED": "new"})
+        self.assertEqual(now["Labels"]["revision"], "override")
+        self.assertEqual(now["Labels"]["added"], "new")
+
+    def test_missing_old_image_config_stops_before_any_mutation(self):
+        self.d.images["sha256:old"].pop("Config")
+        with self.assertRaisesRegex(m.Error, "image defaults"):
+            self.u.agent()
+        self.assertEqual(self.d.events, [])
 
     def test_same_version_is_read_only(self):
         self.version.return_value = "2.45.2"
@@ -197,7 +255,7 @@ class AgentTests(unittest.TestCase):
                                          "old_version": "2.45.2", "token": "txn", "phase": "prepared"}})
         self.d.stop("old")
         self.d.rename("old", m.BACKUP)
-        self.d.create("portainer_agent", m.agent_payload(old, "2.45.3", "txn"))
+        self.d.create("portainer_agent", m.agent_payload(old, "2.45.3", "txn", self.d.images[old["Image"]]["Config"]))
         with self.assertRaises(m.Error):
             self.u.agent()
         self.assertEqual(self.d.inspect("portainer_agent")["Id"], "old")
@@ -492,7 +550,7 @@ class ValidationTests(unittest.TestCase):
     def test_payload_does_not_mutate_original_inspection(self):
         old = container()
         frozen = copy.deepcopy(old)
-        m.agent_payload(old, "2.45.3", "test")
+        m.agent_payload(old, "2.45.3", "test", {"Env": ["PATH=/bin"], "Labels": {}})
         self.assertEqual(old, frozen)
 
 

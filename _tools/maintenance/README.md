@@ -33,7 +33,12 @@ Merging this tool does not itself deploy it or change any Compose service.
 Agent discovery uses one named container, not a daemon-wide container listing.
 State contains image/container IDs and transaction metadata, not environment
 values or volume contents. The replacement payload stays in memory and preserves
-agent settings, mounts, restart policy and networks. A transaction label binds
+operator overrides, mounts, restart policy and networks. Execution defaults,
+environment entries and labels inherited from the running image are omitted so
+the replacement inherits its own image defaults. Explicit settings identical to
+old image defaults cannot be distinguished from inheritance and follow the new
+image too; existing label overrides that differ from the running image are
+retained, not retrospectively reclassified. A transaction label binds
 recovery to this job's replacement; an unexpected replacement is not deleted.
 No running application container is removed.
 
