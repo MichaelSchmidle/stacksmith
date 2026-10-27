@@ -10,9 +10,9 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    cpus: "0.5"
-    mem_limit: 256m
-    pids_limit: 64
+    cpus: "${TALLYPORT_CPU_LIMIT:-0.5}"
+    mem_limit: ${TALLYPORT_MEMORY_LIMIT:-256m}
+    pids_limit: ${TALLYPORT_PIDS_LIMIT:-64}
     environment:
       TZ: ${TZ:-Europe/Zurich}
     command: ["watch"]

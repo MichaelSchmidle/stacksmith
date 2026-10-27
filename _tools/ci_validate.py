@@ -614,6 +614,16 @@ def validate_tallyport_contract() -> None:
     assert set(service["environment"]) == {"TZ"}
     assert "no-new-privileges:true" in service["security_opt"]
     assert service["command"] == ["watch"]
+    assert float(service["cpus"]) == 0.5
+    assert int(service["mem_limit"]) == 256 * 1024 * 1024
+    assert int(service["pids_limit"]) == 64
+    custom = render(TALLYPORT_CPU_LIMIT="1", TALLYPORT_MEMORY_LIMIT="512m",
+                    TALLYPORT_PIDS_LIMIT="128")
+    custom.check_returncode()
+    limits = json.loads(custom.stdout)["services"]["tallyport"]
+    assert float(limits["cpus"]) == 1
+    assert int(limits["mem_limit"]) == 512 * 1024 * 1024
+    assert int(limits["pids_limit"]) == 128
     mounts = {mount["target"]: mount for mount in service["volumes"]}
     assert set(mounts) == {"/config/config.toml", "/run/secrets/sure_api_key", "/intake", "/state"}
     for target, key in (("/config/config.toml", "TALLYPORT_CONFIG_FILE"),

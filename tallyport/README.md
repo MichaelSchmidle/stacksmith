@@ -11,6 +11,10 @@ application. The initial image must be published before first deployment.
 No UI, published ports, Traefik labels or shared `stacksmith` network are needed;
 the default isolated bridge needs outbound access to the configured Sure HTTPS URL.
 
+Resource defaults are 0.5 CPU, 256 MiB and 64 PIDs. Override them through
+`TALLYPORT_CPU_LIMIT`, `TALLYPORT_MEMORY_LIMIT` and `TALLYPORT_PIDS_LIMIT` in private
+deployment settings rather than editing the template.
+
 ## Private image access
 
 The application repository and container package start private. Register GHCR in
@@ -74,6 +78,14 @@ Starting the worker is permission to import files in the inbox. Do not start it
 against live data just to check container health. First use a separately scoped
 synthetic test account/intake and verify import, repeated-file handling and
 restart recovery. Container liveness is not successful import evidence.
+Verify DNS resolution, Tailscale routing, TLS hostname validation and the actual
+Sure API flow from the worker's container network, not merely from its host. The
+default bridge does not itself establish reachability to a tailnet-only endpoint.
+
+Configuration errors exit 4; `restart: unless-stopped` then restarts the container
+with Docker's backoff. A repeatedly restarting container is not a healthy worker:
+stop the stack, correct its private configuration/permissions and validate before
+starting it again.
 
 Use one worker and one durable state directory for a given intake. Complete
 files should be published by copying under a temporary extension and renaming to
