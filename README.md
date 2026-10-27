@@ -82,6 +82,7 @@ CLOUDFLARE_DNS_API_TOKEN=your-cloudflare-api-token
 
 Each service is in its own directory with complete documentation:
 
+- **Tallyport** (`tallyport/`) - Restricted CSV statement intake and verified Sure API imports; private prebuilt image, outbound-only worker
 - **Tapkeeper** (`tapkeeper/`) - Single-owner Telegram watch-wear logger; outbound-only, no shared network required
 - **Pi-hole** (`pihole/`) - DNS server with ad-blocking
 - **Media Stack** (`arr/`) - Complete media automation suite
