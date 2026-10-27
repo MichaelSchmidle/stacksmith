@@ -1,0 +1,48 @@
+services:
+  tallyport:
+    image: ghcr.io/michaelschmidle/tallyport:latest
+    container_name: stacksmith_tallyport
+    user: "10001:10001"
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    cpus: "${TALLYPORT_CPU_LIMIT:-0.5}"
+    mem_limit: ${TALLYPORT_MEMORY_LIMIT:-256m}
+    pids_limit: ${TALLYPORT_PIDS_LIMIT:-64}
+    environment:
+      TZ: ${TZ:-Europe/Zurich}
+    command: ["watch"]
+    volumes:
+      - type: bind
+        source: ${TALLYPORT_CONFIG_FILE:?Set an existing absolute configuration file path}
+        target: /config/config.toml
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${TALLYPORT_API_KEY_FILE:?Set an existing absolute API-key file path}
+        target: /run/secrets/sure_api_key
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${TALLYPORT_INTAKE_DIR:?Set an existing mounted restricted intake directory}
+        target: /intake
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${TALLYPORT_STATE_DIR:?Set an existing local-filesystem state directory}
+        target: /state
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m,mode=1777
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

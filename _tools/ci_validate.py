@@ -577,7 +577,75 @@ def validate_buzz_storage_contract() -> None:
     print("buzz: native S3 initialization, private storage, metadata persistence and unchanged probe: OK")
 
 
+def validate_tallyport_contract() -> None:
+    stack = ROOT / "tallyport"
+    required = {
+        "TALLYPORT_CONFIG_FILE": "/srv/tallyport/config.toml",
+        "TALLYPORT_API_KEY_FILE": "/srv/tallyport/api-key",
+        "TALLYPORT_INTAKE_DIR": "/srv/tallyport/intake",
+        "TALLYPORT_STATE_DIR": "/srv/tallyport/state",
+    }
+
+    def render(**overrides: str | None) -> subprocess.CompletedProcess:
+        env = {key: value for key, value in os.environ.items()
+               if not key.startswith("TALLYPORT_") and key != "COMPOSE_FILE"}
+        env.update(required)
+        for key, value in overrides.items():
+            if value is None:
+                env.pop(key, None)
+            else:
+                env[key] = value
+        return subprocess.run(
+            ["docker", "compose", "--env-file", str(stack / ".env.example"),
+             "-f", str(stack / "docker-compose.yml"), "config", "--format", "json"],
+            cwd=ROOT, env=env, text=True, capture_output=True,
+        )
+
+    result = render()
+    result.check_returncode()
+    config = json.loads(result.stdout)
+    assert set(config["services"]) == {"tallyport"}
+    service = config["services"]["tallyport"]
+    assert service["image"] == "ghcr.io/michaelschmidle/tallyport:latest"
+    assert service["container_name"] == "stacksmith_tallyport"
+    assert "build" not in service and not service.get("ports") and not service.get("labels")
+    assert service["user"] == "10001:10001" and service["read_only"] is True
+    assert service["cap_drop"] == ["ALL"]
+    assert set(service["environment"]) == {"TZ"}
+    assert "no-new-privileges:true" in service["security_opt"]
+    assert service["command"] == ["watch"]
+    assert float(service["cpus"]) == 0.5
+    assert int(service["mem_limit"]) == 256 * 1024 * 1024
+    assert int(service["pids_limit"]) == 64
+    custom = render(TALLYPORT_CPU_LIMIT="1", TALLYPORT_MEMORY_LIMIT="512m",
+                    TALLYPORT_PIDS_LIMIT="128")
+    custom.check_returncode()
+    limits = json.loads(custom.stdout)["services"]["tallyport"]
+    assert float(limits["cpus"]) == 1
+    assert int(limits["mem_limit"]) == 512 * 1024 * 1024
+    assert int(limits["pids_limit"]) == 128
+    mounts = {mount["target"]: mount for mount in service["volumes"]}
+    assert set(mounts) == {"/config/config.toml", "/run/secrets/sure_api_key", "/intake", "/state"}
+    for target, key in (("/config/config.toml", "TALLYPORT_CONFIG_FILE"),
+                        ("/run/secrets/sure_api_key", "TALLYPORT_API_KEY_FILE"),
+                        ("/intake", "TALLYPORT_INTAKE_DIR"), ("/state", "TALLYPORT_STATE_DIR")):
+        mount = mounts[target]
+        assert mount["type"] == "bind" and mount["source"] == required[key]
+        assert mount.get("read_only", False) == (target not in ("/intake", "/state"))
+        assert not mount.get("bind", {}).get("create_host_path", False)
+    # Older Compose may omit false fields; retain a source-level fail-closed assertion.
+    assert (stack / "docker-compose.yml").read_text().count("create_host_path: false") == 4
+    assert set(service["networks"]) == {"default"}
+    assert not config["networks"]["default"].get("external", False)
+    for key in required:
+        for value in (None, ""):
+            failed = render(**{key: value})
+            assert failed.returncode != 0 and key in failed.stderr, (key, value)
+    print("tallyport: restricted binds, private prebuilt image, local state and no ingress: OK")
+
+
 def main() -> None:
+    validate_tallyport_contract()
     validate_buzz_storage_contract()
     validate_sure_contract()
     validate_nemotron_spark_contract()
