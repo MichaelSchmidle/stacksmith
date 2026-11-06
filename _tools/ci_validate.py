@@ -644,7 +644,93 @@ def validate_tallyport_contract() -> None:
     print("tallyport: restricted binds, private prebuilt image, local state and no ingress: OK")
 
 
+def validate_voicestudio_contract() -> None:
+    stack = ROOT / "voicestudio-cuda-arm64"
+    required = {
+        "VOICESTUDIO_HOSTNAME": "studio.example.com",
+        "VOICESTUDIO_API_KEY": "ci-placeholder",
+    }
+
+    def render(example: bool = False, /, **overrides: str | None) -> subprocess.CompletedProcess:
+        env = {key: value for key, value in os.environ.items()
+               if not key.startswith(("VOICESTUDIO_", "COMPOSE_"))}
+        env.update(required)
+        for key, value in overrides.items():
+            if value is None:
+                env.pop(key, None)
+            else:
+                env[key] = value
+        return subprocess.run(
+            ["docker", "compose", "--env-file",
+             str(stack / ".env.example") if example else os.devnull,
+             "-f", str(stack / "docker-compose.yml"), "config", "--format", "json"],
+            cwd=ROOT, env=env, text=True, capture_output=True,
+        )
+
+    for example in (False, True):
+        result = render(example)
+        result.check_returncode()
+        config = json.loads(result.stdout)
+        assert set(config["services"]) == {"voicestudio"}
+        service = config["services"]["voicestudio"]
+        assert service["image"] == "ghcr.io/debpalash/voicestudio:cuda-arm64"
+        assert service["platform"] == "linux/arm64"
+        assert service["container_name"] == "stacksmith_voicestudio"
+        assert not any(key in service for key in ("ports", "network_mode", "build", "privileged", "ipc"))
+        assert set(service["networks"]) == {"stacksmith"}
+        assert config["networks"]["stacksmith"]["external"] is True
+        assert service["command"] == ["--host", "0.0.0.0", "--port", "3900", "--no-proxy-headers"]
+        environment = service["environment"]
+        assert environment["OMNIVOICE_API_KEY"] == required["VOICESTUDIO_API_KEY"]
+        assert environment["OMNIVOICE_SERVER_MODE"] == "1"
+        assert environment["OMNIVOICE_ANALYTICS_DISABLED"] == "1"
+        assert environment["OMNIVOICE_ALLOWED_HOSTS"] == required["VOICESTUDIO_HOSTNAME"]
+        assert environment["OMNIVOICE_ALLOWED_ORIGINS"] == "https://studio.example.com"
+        assert environment["OMNIVOICE_TRUSTED_NETWORKS"] == ""
+        assert environment["OMNIVOICE_TRUST_HOST_LOOPBACK"] == "0"
+        assert environment["HF_HOME"] == "/app/omnivoice_data/huggingface"
+        assert environment["OMNIVOICE_DATA_DIR"] == "/app/omnivoice_data"
+        assert [(v["type"], v["source"], v["target"]) for v in service["volumes"]] == [
+            ("volume", "voicestudio-data", "/app/omnivoice_data"),
+        ]
+        assert config["volumes"]["voicestudio-data"]["name"] == "stacksmith_voicestudio_data"
+        resources = service["deploy"]["resources"]
+        assert float(resources["limits"]["cpus"]) == 4
+        assert int(resources["limits"]["memory"]) == 16 * 1024**3
+        assert resources["reservations"]["devices"] == [
+            {"driver": "nvidia", "count": 1, "capabilities": ["gpu"]},
+        ]
+        assert service["healthcheck"]["test"] == [
+            "CMD", "python3", "backend/docker_entrypoint.py", "--health-check",
+        ]
+        labels = service["labels"]
+        router = "traefik.http.routers.voicestudio"
+        assert labels[router + ".rule"] == "Host(`studio.example.com`)"
+        assert labels[router + ".entrypoints"] == "websecure-tailscale"
+        assert labels[router + ".tls.certresolver"] == "stacksmith"
+        assert labels[router + ".middlewares"] == "secure-headers@docker"
+        assert labels["traefik.http.services.voicestudio.loadbalancer.server.port"] == "3900"
+        assert labels["traefik.docker.network"] == "stacksmith"
+
+    for key in required:
+        for value in (None, ""):
+            failed = render(**{key: value})
+            assert failed.returncode != 0 and key in failed.stderr, (key, value, failed)
+        # An unset shell hostname legitimately falls back to the example value;
+        # an explicitly empty input must still fail with the example loaded.
+        failed = render(True, **{key: ""})
+        assert failed.returncode != 0 and key in failed.stderr, (key, failed)
+    failed = render(True, VOICESTUDIO_API_KEY=None)
+    assert failed.returncode != 0 and "VOICESTUDIO_API_KEY" in failed.stderr
+    custom = render(True, VOICESTUDIO_CPU_LIMIT="2", VOICESTUDIO_MEMORY_LIMIT="8G")
+    custom.check_returncode()
+    limits = json.loads(custom.stdout)["services"]["voicestudio"]["deploy"]["resources"]["limits"]
+    assert float(limits["cpus"]) == 2 and int(limits["memory"]) == 8 * 1024**3
+    print("voicestudio: ARM64 CUDA, keyed private routing, persistent model cache and fail-closed inputs: OK")
+
+
 def main() -> None:
+    validate_voicestudio_contract()
     validate_tallyport_contract()
     validate_buzz_storage_contract()
     validate_sure_contract()

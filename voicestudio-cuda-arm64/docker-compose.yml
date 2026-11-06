@@ -1,0 +1,56 @@
+services:
+  voicestudio:
+    # ARM64 equivalent of upstream latest: rolling main, not the stable channel.
+    image: ghcr.io/debpalash/voicestudio:cuda-arm64
+    platform: linux/arm64
+    container_name: stacksmith_voicestudio
+    restart: unless-stopped
+    # Preserve the socket peer for authentication; do not trust forwarded client IPs.
+    command: ["--host", "0.0.0.0", "--port", "3900", "--no-proxy-headers"]
+    environment:
+      OMNIVOICE_API_KEY: ${VOICESTUDIO_API_KEY:?Set VOICESTUDIO_API_KEY to a long random secret}
+      OMNIVOICE_SERVER_MODE: "1"
+      OMNIVOICE_DATA_DIR: /app/omnivoice_data
+      HF_HOME: /app/omnivoice_data/huggingface
+      OMNIVOICE_ALLOWED_HOSTS: ${VOICESTUDIO_HOSTNAME:?Set VOICESTUDIO_HOSTNAME to the routed hostname}
+      OMNIVOICE_ALLOWED_ORIGINS: https://${VOICESTUDIO_HOSTNAME:?Set VOICESTUDIO_HOSTNAME to the routed hostname}
+      OMNIVOICE_TRUSTED_NETWORKS: ""
+      OMNIVOICE_TRUST_HOST_LOOPBACK: "0"
+      OMNIVOICE_ANALYTICS_DISABLED: "1"
+      TZ: ${TZ:-Europe/Zurich}
+    volumes:
+      - voicestudio-data:/app/omnivoice_data
+    networks:
+      - stacksmith
+    healthcheck:
+      test: ["CMD", "python3", "backend/docker_entrypoint.py", "--health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    deploy:
+      resources:
+        limits:
+          cpus: "${VOICESTUDIO_CPU_LIMIT:-4}"
+          memory: ${VOICESTUDIO_MEMORY_LIMIT:-16G}
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=stacksmith"
+      - "traefik.http.routers.voicestudio.rule=Host(`${VOICESTUDIO_HOSTNAME:?Set VOICESTUDIO_HOSTNAME to the routed hostname}`)"
+      - "traefik.http.routers.voicestudio.entrypoints=websecure-tailscale"
+      - "traefik.http.routers.voicestudio.tls.certresolver=stacksmith"
+      - "traefik.http.routers.voicestudio.middlewares=secure-headers@docker"
+      - "traefik.http.services.voicestudio.loadbalancer.server.port=3900"
+
+volumes:
+  voicestudio-data:
+    name: stacksmith_voicestudio_data
+
+networks:
+  stacksmith:
+    external: true

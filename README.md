@@ -96,6 +96,7 @@ Each service is in its own directory with complete documentation:
 - **Paperless-ngx** (`paperless/`) - Private document intake, German/English OCR and searchable archive with PostgreSQL and Redis
 - **Obsidian Web Desktop** (`obsidian/`) - Browser-accessible Obsidian desktop for a Syncthing-backed vault
 - **Voicebox** (`voicebox/`) - ARM64 NVIDIA/CUDA voice studio with prebuilt registry images and an OpenAI-compatible TTS sidecar
+- **VoiceStudio ARM64 CUDA** ([`voicestudio-cuda-arm64/`](voicestudio-cuda-arm64/)) - Upstream browser voice workbench with in-app model downloads, persistent storage and authenticated private routing
 - **Buzz** (`buzz/`) - Private human-and-agent collaboration workspace with signed channels, threads, and workflows
 - **vLLM GB10 Qwen 3.6** (`vllm-gb10-qwen-3.6/`) - Specialized DGX Spark / GB10 serving stack for Qwen 3.6 with configurable memory/context knobs
 - **SGLang GB10 Qwen 3.8** (`sglang-gb10-qwen-3.8/`) - Single-model DGX Spark / GB10 stack for Qwen 3.8 NVFP4 with DSpark and 262K native context
