@@ -1,6 +1,7 @@
 services:
   portainer:
     image: portainer/portainer-ce:latest
+    command: --logo ${PORTAINER_LOGO_URL}
     container_name: stacksmith_portainer
     restart: unless-stopped
     environment:
