@@ -1,4 +1,14 @@
-# Stacksmith - Docker Infrastructure Management System
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/logo/stacksmith-lockup-on-dark.svg">
+    <img alt="Stacksmith" src="assets/brand/logo/stacksmith-lockup.svg" height="64">
+  </picture>
+</h1>
+
+<p align="center">
+  <strong>Self-hosted Docker infrastructure, forged from composable stacks.</strong><br>
+  Portainer · Traefik · Tailscale
+</p>
 
 Stacksmith is a modular Docker-based infrastructure management system built around **Portainer** as the central management interface. It provides a complete self-hosted solution for managing containerized applications with enterprise-grade security, SSL automation, and flexible service composition.
 
