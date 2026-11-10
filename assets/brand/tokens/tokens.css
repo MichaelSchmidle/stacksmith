@@ -1,0 +1,94 @@
+/* Stacksmith design tokens. Generated alongside tokens.json. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap');
+
+:root {
+  --ss-iron-50: #F6F7F9;
+  --ss-iron-100: #ECEEF2;
+  --ss-iron-200: #D8DCE3;
+  --ss-iron-300: #B6BCC8;
+  --ss-iron-400: #8E96A6;
+  --ss-iron-500: #687183;
+  --ss-iron-600: #4A5261;
+  --ss-iron-700: #323844;
+  --ss-iron-800: #22262E;
+  --ss-iron-900: #16191F;
+  --ss-iron-950: #0E1014;
+  --ss-ember-100: #FFE6D5;
+  --ss-ember-400: #FF8641;
+  --ss-ember-500: #F2610F;
+  --ss-ember-600: #C9470A;
+  --ss-ember-700: #B23E06;
+  --ss-status-healthy: #1F9D63;
+  --ss-status-warning: #E0A100;
+  --ss-status-error: #E5484D;
+  --ss-status-info: #3D8BFD;
+
+  --ss-font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --ss-font-text: Inter, ui-sans-serif, system-ui, sans-serif;
+  --ss-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ss-type-display: 700 64px/68px var(--ss-font-display);
+  --ss-tracking-display: -0.04em;
+  --ss-type-h1: 700 44px/48px var(--ss-font-display);
+  --ss-tracking-h1: -0.02em;
+  --ss-type-h2: 700 32px/38px var(--ss-font-display);
+  --ss-tracking-h2: -0.015em;
+  --ss-type-h3: 500 24px/30px var(--ss-font-display);
+  --ss-tracking-h3: -0.01em;
+  --ss-type-body: 400 16px/26px var(--ss-font-text);
+  --ss-tracking-body: 0;
+  --ss-type-small: 400 14px/22px var(--ss-font-text);
+  --ss-tracking-small: 0;
+  --ss-type-code: 400 14px/22px var(--ss-font-mono);
+  --ss-tracking-code: 0;
+  --ss-type-label: 500 12px/16px var(--ss-font-mono);
+  --ss-tracking-label: 0.08em;
+
+  --ss-space-1: 4px;
+  --ss-space-2: 8px;
+  --ss-space-3: 12px;
+  --ss-space-4: 16px;
+  --ss-space-5: 24px;
+  --ss-space-6: 32px;
+  --ss-space-7: 48px;
+  --ss-space-8: 64px;
+  --ss-space-9: 96px;
+  --ss-radius-sm: 3px;
+  --ss-radius-md: 6px;
+  --ss-radius-lg: 10px;
+  --ss-radius-pill: 999px;
+  --ss-control-height: 44px;
+
+  --ss-ground: #F6F7F9;
+  --ss-surface: #FFFFFF;
+  --ss-border: #D8DCE3;
+  --ss-text: #16191F;
+  --ss-text-muted: #4A5261;
+  --ss-accent: #F2610F;
+  --ss-accent-text: #B23E06;
+  --ss-on-accent: #16191F;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ss-ground: #0E1014;
+    --ss-surface: #16191F;
+    --ss-border: #323844;
+    --ss-text: #F6F7F9;
+    --ss-text-muted: #8E96A6;
+    --ss-accent: #F2610F;
+    --ss-accent-text: #FF8641;
+    --ss-on-accent: #16191F;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ss-ground: #0E1014;
+  --ss-surface: #16191F;
+  --ss-border: #323844;
+  --ss-text: #F6F7F9;
+  --ss-text-muted: #8E96A6;
+  --ss-accent: #F2610F;
+  --ss-accent-text: #FF8641;
+  --ss-on-accent: #16191F;
+}
