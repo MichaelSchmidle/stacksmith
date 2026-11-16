@@ -14,7 +14,11 @@ Uptime Kuma is a self-hosted monitoring tool that provides real-time website and
 
 ## Services
 
-- **Uptime Kuma**: Monitoring application (`louislam/uptime-kuma:1`)
+- **Uptime Kuma**: Monitoring application (`louislam/uptime-kuma:2`)
+
+This stack follows upstream's rolling stable v2 tag, `2`. The upstream `latest`
+tag is deprecated and remains on v1; it does not deliver current stable v2
+releases. See [Docker tags](https://github.com/louislam/uptime-kuma/wiki/Docker-Tags).
 
 ## Quick Start
 
@@ -74,4 +78,22 @@ docker compose -f traefik/docker-compose.yml -f uptimekuma/docker-compose.yml up
 **Important**: Requires local storage. Does **NOT** support NFS.
 
 HTTPS via Traefik. Uses SQLite database. Data persisted in Docker volumes. Monitor your Stacksmith services and external endpoints.
+
+## Upgrading from v1
+
+Follow the [upstream migration guide](https://github.com/louislam/uptime-kuma/wiki/Migration-From-v1-To-v2)
+before deploying this Compose file over a v1 installation:
+
+1. Stop the existing instance and back up its complete `/app/data` volume.
+   Preserve the previous image identity and deployment configuration too.
+2. Deploy with `louislam/uptime-kuma:2`, preserving the existing data volume.
+3. Allow the database and heartbeat-history migration to finish without
+   interruption. Large histories can take hours; watch the migration logs rather
+   than restarting a slow migration.
+4. Verify login, monitor configuration, fresh checks and notifications before
+   upgrading another instance.
+
+To roll back after migration starts, stop v2 and restore the pre-upgrade data
+backup before starting the previous image. Reverting only the image tag is not a
+safe database rollback. Prevent automatic redeployment from racing this process.
 
