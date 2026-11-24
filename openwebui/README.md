@@ -59,9 +59,10 @@ keep the existing primary path, project, Traefik route and chat volume.
 - Set `STACKSMITH_OPEN_WEBUI_IMAGE` to the immutable image digest of the already
   running, verified Open WebUI 0.13.4 install. If it is not 0.13.4, handle the
   version change separately; do not let enabling Reverie pull a different UI.
-- Set `REVERIE_IMAGE` to the released `ghcr.io/memrok-com/reverie-openwebui`
-  image digest, and set a dedicated `REVERIE_ADAPTER_TOKEN` through the stack
-  environment. Do not store it in Git; both services receive it.
+- Set `REVERIE_IMAGE` to the [v0.1.0 alpha](https://github.com/memrok-com/reverie-openwebui/releases/tag/v0.1.0) image:
+  `ghcr.io/memrok-com/reverie-openwebui@sha256:58932d1336f75614a63ac06b49150a4dc6606d4d1e0cdf90aba5eb20cbe974d1`.
+  Set a dedicated `REVERIE_ADAPTER_TOKEN` in the stack environment, not in Git;
+  both services receive it.
 - Set `REVERIE_REFLECTION_URL` to the configured LiteLLM chat-completions URL
   (including `/v1/chat/completions`) and `REVERIE_REFLECTION_MODEL` to its model
   alias. Set `REVERIE_REFLECTION_API_KEY` privately if needed, and use
@@ -71,7 +72,7 @@ keep the existing primary path, project, Traefik route and chat volume.
 Render and inspect the composed configuration privately before applying it; it
 contains secrets. When using the CLI, pass `-f openwebui/docker-compose.yml`
 then `-f openwebui/docker-compose.reverie.yml` to commands for this project. Follow the
-adapter's [installation and first-use instructions](https://github.com/memrok-com/reverie-openwebui#add-to-an-existing-installation)
+adapter's [v0.1.0 installation guide](https://github.com/memrok-com/reverie-openwebui/blob/v0.1.0/docs/install.md)
 for the native Functions and preset. Starting the sidecar alone does not install them.
 
 To disable, first follow the adapter's native Function/preset disable steps and
