@@ -1,6 +1,6 @@
 services:
   open-webui:
-    image: ghcr.io/open-webui/open-webui:main
+    image: ${STACKSMITH_OPEN_WEBUI_IMAGE:-ghcr.io/open-webui/open-webui:main}
     container_name: stacksmith_open_webui
     restart: unless-stopped
     environment:

@@ -1,0 +1,43 @@
+services:
+  open-webui:
+    image: ${STACKSMITH_OPEN_WEBUI_IMAGE:?Set the verified stock Open WebUI image digest}
+    environment:
+      REVERIE_ADAPTER_URL: http://reverie:8766
+      REVERIE_ADAPTER_TOKEN: ${REVERIE_ADAPTER_TOKEN:?Set a dedicated shared token}
+      REVERIE_REFLECTION_URL: ${REVERIE_REFLECTION_URL:?Set the private chat completions URL}
+      REVERIE_REFLECTION_MODEL: ${REVERIE_REFLECTION_MODEL:?Set the reflection model}
+      REVERIE_REFLECTION_API_KEY: ${REVERIE_REFLECTION_API_KEY:-}
+      REVERIE_REFLECTION_REASONING_EFFORT: ${REVERIE_REFLECTION_REASONING_EFFORT:-}
+    networks:
+      - stacksmith
+      - reverie-private
+    labels:
+      traefik.docker.network: stacksmith
+
+  reverie:
+    image: ${REVERIE_IMAGE:?Set the released Reverie image digest}
+    restart: unless-stopped
+    environment:
+      REVERIE_ADAPTER_TOKEN: ${REVERIE_ADAPTER_TOKEN:?Set a dedicated shared token}
+    volumes:
+      - reverie-data:/data
+    networks:
+      - reverie-private
+    labels:
+      traefik.enable: 'false'
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 64
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.5
+
+volumes:
+  reverie-data:
+
+networks:
+  reverie-private:
+    internal: true
