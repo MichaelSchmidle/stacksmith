@@ -47,6 +47,41 @@ docker compose --env-file openwebui/.env -f openwebui/docker-compose.yml up -d
 https://ai.yourdomain.com
 ```
 
+## Optional: Reverie
+
+[Reverie for Open WebUI](https://github.com/memrok-com/reverie-openwebui) adds
+memory to opted-in folders. It requires stock Open WebUI **0.13.4** and a released
+Linux amd64 adapter image. Use `docker-compose.reverie.yml` as the **additional**
+Compose file after `docker-compose.yml`, not as another stack. For Portainer,
+add `openwebui/docker-compose.reverie.yml` to that Git stack's additional paths;
+keep the existing primary path, project, Traefik route and chat volume.
+
+- Set `STACKSMITH_OPEN_WEBUI_IMAGE` to the immutable image digest of the already
+  running, verified Open WebUI 0.13.4 install. If it is not 0.13.4, handle the
+  version change separately; do not let enabling Reverie pull a different UI.
+- Set `REVERIE_IMAGE` to the [v0.1.0 alpha](https://github.com/memrok-com/reverie-openwebui/releases/tag/v0.1.0) image:
+  `ghcr.io/memrok-com/reverie-openwebui@sha256:58932d1336f75614a63ac06b49150a4dc6606d4d1e0cdf90aba5eb20cbe974d1`.
+  Set a dedicated `REVERIE_ADAPTER_TOKEN` in the stack environment, not in Git;
+  both services receive it.
+- Set `REVERIE_REFLECTION_URL` to the configured LiteLLM chat-completions URL
+  (including `/v1/chat/completions`) and `REVERIE_REFLECTION_MODEL` to its model
+  alias. Set `REVERIE_REFLECTION_API_KEY` privately if needed, and use
+  `REVERIE_REFLECTION_REASONING_EFFORT=none` only if that route supports it.
+  The sidecar has no published port, Traefik route, or provider credential.
+
+Render and inspect the composed configuration privately before applying it; it
+contains secrets. When using the CLI, pass `-f openwebui/docker-compose.yml`
+then `-f openwebui/docker-compose.reverie.yml` to commands for this project. Follow the
+adapter's [v0.1.0 installation guide](https://github.com/memrok-com/reverie-openwebui/blob/v0.1.0/docs/install.md)
+for the native Functions and preset. Starting the sidecar alone does not install them.
+
+To disable, first follow the adapter's native Function/preset disable steps and
+verify an ordinary chat. Then remove the additional Compose file and adapter
+environment entries, but **keep `STACKSMITH_OPEN_WEBUI_IMAGE` pinned**. Reconcile
+the removed `reverie` service in the same project and verify that both
+`stacksmith_open_webui_data` and the project's `reverie-data` volume remain.
+Never remove volumes to turn Reverie off. This is not a restore procedure.
+
 ## Notes
 
 - Open WebUI listens on container port `8080`; Traefik routes to that hard-coded internal port via the Compose label.
